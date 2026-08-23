@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
+import { C, F, T, btn } from './lib/theme'
 
 const RACE_DAYS = [
   ['2026-12-02', 'Wed 2 Dec'], ['2026-12-03', 'Thu 3 Dec'],
@@ -24,97 +25,104 @@ export default function App() {
   useEffect(() => {
     if (!session) { setProfile(null); return }
     supabase.from('profiles').select('*').eq('id', session.user.id).single()
-      .then(({ data, error }) => {
-        if (error) console.error(error)
-        setProfile(data)
-      })
+      .then(({ data, error }) => { if (error) console.error(error); setProfile(data) })
   }, [session])
 
   async function save(patch) {
     setSaving(true)
     const { error } = await supabase.from('profiles')
       .update(patch).eq('id', session.user.id)
-    if (error) console.error(error)
-    else setProfile({ ...profile, ...patch })
+    if (error) console.error(error); else setProfile({ ...profile, ...patch })
     setSaving(false)
   }
 
-  const daysToGo = profile?.race_date
+  const days = profile?.race_date
     ? Math.max(0, Math.ceil((new Date(profile.race_date) - new Date()) / 86400000))
     : null
 
-  const box = { padding: 40, fontFamily: 'system-ui', maxWidth: 460 }
-  const pill = on => ({
-    padding: '12px 16px', marginRight: 8, marginBottom: 8, borderRadius: 999,
-    border: `1.5px solid ${on ? '#1a1512' : '#ddd'}`,
-    background: on ? '#1a1512' : 'transparent',
-    color: on ? '#fff' : '#1a1512',
-    cursor: 'pointer', fontSize: 14, fontWeight: 600, fontFamily: 'inherit',
-  })
+  const page = { minHeight: '100%', padding: '52px 20px 40px', maxWidth: 480, margin: '0 auto' }
 
   if (!session) return (
-    <div style={box}>
-      <h1>Salus Train</h1>
-      {sent ? <p>Check your email for the link.</p> : (
-        <>
-          <input value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="your@email.com" style={{ padding: 10, width: 240 }} />
-          <button onClick={async () => {
-            await supabase.auth.signInWithOtp({ email }); setSent(true)
-          }} style={{ padding: 10, marginLeft: 8 }}>Send link</button>
-        </>
-      )}
+    <div style={page}>
+      <div style={{ ...T.label, marginBottom: 10 }}>SALUS HOUSE</div>
+      <h1 style={T.h1}>Salus Train</h1>
+      {sent
+        ? <p style={{ ...T.body, marginTop: 20 }}>Check your email for the link.</p>
+        : (
+          <div style={{ marginTop: 24 }}>
+            <input value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              style={{
+                width: '100%', background: 'transparent', color: C.ink,
+                border: `1.5px solid ${C.line}`, borderRadius: 999,
+                padding: '17px 20px', fontSize: 16, outline: 'none',
+              }} />
+            <button style={{ ...btn.primary, marginTop: 12 }}
+              onClick={async () => { await supabase.auth.signInWithOtp({ email }); setSent(true) }}>
+              Send link
+            </button>
+          </div>
+        )}
     </div>
   )
 
-  if (!profile) return <div style={box}><p>Loading…</p></div>
+  if (!profile) return <div style={page}><p style={T.body}>Loading…</p></div>
 
   return (
-    <div style={box}>
-      <h1>Salus Train</h1>
-      <p>Morning{profile.name ? `, ${profile.name.split(' ')[0]}` : ''}.</p>
+    <div style={page}>
+      <div style={T.label}>WEEK 1 OF 8 · ROAD TO HYROX</div>
+      <h1 style={{ ...T.h1, marginTop: 8 }}>
+        Morning{profile.name ? `, ${profile.name.split(' ')[0]}` : ''}
+      </h1>
 
-      {daysToGo !== null && (
-        <div style={{ background: '#f4f0ea', borderRadius: 16, padding: 20, margin: '24px 0' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.14em', color: '#6d6156' }}>
-            HYROX LONDON EXCEL
+      {days !== null && (
+        <div style={{
+          background: C.card, borderRadius: 18, padding: '18px 18px 20px', marginTop: 22,
+        }}>
+          <div style={{ ...T.label, color: C.g }}>HYROX LONDON EXCEL</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginTop: 6 }}>
+            <div style={{ fontSize: 46, fontWeight: 900, letterSpacing: '-.05em', lineHeight: 1, ...T.num }}>
+              {days}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.sub }}>days to go</div>
           </div>
-          <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: '-.04em', lineHeight: 1, marginTop: 6 }}>
-            {daysToGo}
-          </div>
-          <div style={{ fontSize: 15, color: '#6d6156', marginTop: 4 }}>
-            days to go · {RACE_DAYS.find(d => d[0] === profile.race_date)?.[1]}
+          <div style={{ fontSize: 13.5, color: C.sub, marginTop: 7 }}>
+            {RACE_DAYS.find(d => d[0] === profile.race_date)?.[1]}
             {profile.race_division ? ` · ${profile.race_division}` : ''}
+          </div>
+          <div style={{ display: 'flex', gap: 4, marginTop: 15 }}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} style={{
+                flex: 1, height: 5, borderRadius: 999,
+                background: i === 0 ? 'rgba(232,220,200,.4)' : C.card3,
+              }} />
+            ))}
           </div>
         </div>
       )}
 
-      <h3 style={{ marginTop: 28, fontSize: 13, letterSpacing: '.1em', color: '#6d6156' }}>
-        RACE DAY
-      </h3>
-      <div>
-        {RACE_DAYS.map(([date, label]) => (
-          <button key={date} style={pill(profile.race_date === date)}
-            onClick={() => save({ race_date: date })}>{label}</button>
-        ))}
-      </div>
+      <div style={{ ...T.label, marginTop: 28, marginBottom: 12 }}>RACE DAY</div>
+      {RACE_DAYS.map(([date, label]) => (
+        <button key={date} style={btn.pill(profile.race_date === date)}
+          onClick={() => save({ race_date: date })}>{label}</button>
+      ))}
 
-      <h3 style={{ marginTop: 24, fontSize: 13, letterSpacing: '.1em', color: '#6d6156' }}>
-        DIVISION
-      </h3>
-      <div>
-        {DIVISIONS.map(d => (
-          <button key={d} style={pill(profile.race_division === d)}
-            onClick={() => save({ race_division: d })}>{d}</button>
-        ))}
-      </div>
+      <div style={{ ...T.label, marginTop: 22, marginBottom: 12 }}>DIVISION</div>
+      {DIVISIONS.map(d => (
+        <button key={d} style={btn.pill(profile.race_division === d)}
+          onClick={() => save({ race_division: d })}>{d}</button>
+      ))}
 
-      <p style={{ marginTop: 20, fontSize: 13, color: '#999' }}>
+      <div style={{ fontSize: 12.5, color: C.mute, marginTop: 20 }}>
         {saving ? 'Saving…' : 'Saved'}
-      </p>
+      </div>
 
       <button onClick={() => supabase.auth.signOut()}
-        style={{ marginTop: 20, padding: 10 }}>Sign out</button>
+        style={{
+          marginTop: 28, background: 'transparent', border: `1px solid ${C.line}`,
+          color: C.sub, borderRadius: 999, padding: '13px 22px', fontSize: 14,
+          fontWeight: 600, cursor: 'pointer', fontFamily: F,
+        }}>Sign out</button>
     </div>
   )
 }
