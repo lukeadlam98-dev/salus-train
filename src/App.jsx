@@ -19,6 +19,7 @@ import Half     from './screens/Half'
 import Effort   from './screens/Effort'
 import Complete from './screens/Complete'
 import Tabs     from './components/Tabs'
+import Admin    from './admin/Admin'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -35,11 +36,22 @@ export default function App() {
   const [active, setActive] = useState(null)   // the session being worked
   const [result, setResult] = useState(null)
   const [effort, setEffort] = useState(0)
+  // ?admin in the URL, so there's no route to stumble into by accident
+  const [admin, setAdmin] = useState(
+    () => new URLSearchParams(window.location.search).has('admin'))
 
   /* ---------- auth ---------- */
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true) })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s)
+      // Once the link has been swapped for a session, take the token out
+      // of the address bar — a spent link left in history is just clutter.
+      if (s && (window.location.hash.includes('access_token') ||
+                window.location.search.includes('code='))) {
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+    })
     return () => sub.subscription.unsubscribe()
   }, [])
 
@@ -83,6 +95,14 @@ export default function App() {
   if (!session) return <Shell><Auth /></Shell>
   if (!profile) return (
     <Shell><div style={{ padding: 46 }}><p style={T.body}>Loading…</p></div></Shell>
+  )
+
+  /* ---------- back office ---------- */
+  if (admin) return (
+    <Shell><Admin profile={profile} onExit={() => {
+      setAdmin(false)
+      window.history.replaceState({}, '', window.location.pathname)
+    }} /></Shell>
   )
 
   /* ---------- first run ---------- */

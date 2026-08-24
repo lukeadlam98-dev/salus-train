@@ -188,6 +188,23 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
         )
       })}
 
+      {profile?.role === 'admin' && (
+        <>
+          <Label style={{ margin: '26px 0 11px' }}>COACHES</Label>
+          <Card onClick={() => { window.location.search = '?admin' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15.5, fontWeight: 600 }}>Back office</div>
+                <div style={{ ...T.body, fontSize: 13, marginTop: 3 }}>
+                  Write sessions, add photos, publish weeks.
+                </div>
+              </div>
+              <Ico d={I.chev} s={14} c={C.mute} w={2} />
+            </div>
+          </Card>
+        </>
+      )}
+
       <Btn tone="soft" style={{ marginTop: 18 }}
         onClick={() => supabase.auth.signOut()}>Sign out</Btn>
 

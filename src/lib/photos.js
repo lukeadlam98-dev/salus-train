@@ -8,7 +8,7 @@
 // Copy URL, then trim everything after /public/photos/.
 
 const BASE = import.meta.env.VITE_SUPABASE_URL +
-  '/storage/v1/object/public/Photos'
+  '/storage/v1/object/public/photos'
 
 export const PHOTOS = {
   hero:     `${BASE}/hero.jpg`,      // treadmill runners — the splash
