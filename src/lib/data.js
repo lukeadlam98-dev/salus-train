@@ -231,6 +231,11 @@ export async function getBoards() {
 
 // One board's standings. Sharing is opt-in, enforced by the view.
 export async function getBoardRows(board) {
+  if (board.source === 'score') {
+    const { data } = await supabase.from('leaderboard_score')
+      .select('*').not('score', 'is', null).order('score', { ascending: false })
+    return (data || []).map(r => ({ name: r.name, v: r.score, sub: `${r.tests}/5` }))
+  }
   if (board.source === 'half') {
     const { data } = await supabase.from('leaderboard_half')
       .select('*').order('projected_s')
@@ -258,4 +263,22 @@ export async function getConfig() {
   const out = {}
   ;(data || []).forEach(r => { out[r.key] = r.value })
   return out
+}
+
+/* ---------------- the Salus Score ---------------- */
+// Five tests, each scored 0-100 against a fixed standard, averaged.
+export async function getMyScore(userId) {
+  const { data, error } = await supabase.rpc('salus_score', { p_user: userId })
+  if (error) throw error
+  const rows = data || []
+  const overall = rows.length
+    ? Math.round(rows.reduce((a, b) => a + Number(b.score), 0) / rows.length)
+    : null
+  return { rows, overall, tests: rows.length }
+}
+
+export async function getScoreBoard() {
+  const { data } = await supabase.from('leaderboard_score')
+    .select('*').not('score', 'is', null).order('score', { ascending: false })
+  return data || []
 }

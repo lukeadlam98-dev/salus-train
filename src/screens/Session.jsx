@@ -6,6 +6,7 @@ import { Card, Label, Btn, Chip, Back, Ico, I, page } from '../components/ui'
 import Photo from '../components/Photo'
 import { P } from '../lib/theme'
 import Keypad from '../components/Keypad'
+import { SkeletonSession } from '../components/Skeleton'
 
 // Loads calculate from the member's benchmarks — never stored as kilos,
 // so a week 8 re-test doesn't rewrite week 2's history.
@@ -91,7 +92,7 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
     onFinished({ log, elapsed: t, sets, blocks })
   }
 
-  if (!blocks) return <div style={page}><p style={T.body}>Loading…</p></div>
+  if (!blocks) return <SkeletonSession />
 
   /* ---------------- preview ---------------- */
   if (!live) return (
@@ -318,7 +319,8 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
                         : logSet(item, i)}
                       style={{ width: 45, height: 45, borderRadius: 999, border: 'none',
                         cursor: 'pointer', background: on ? C.gDeep : C.card2,
-                        display: 'grid', placeItems: 'center' }}>
+                        display: 'grid', placeItems: 'center',
+                        animation: on ? 'pop .26s cubic-bezier(.2,.8,.3,1)' : 'none' }}>
                       <Ico d={I.check} s={17} c={on ? C.g : C.mute} w={2.6} />
                     </button>
                   </div>

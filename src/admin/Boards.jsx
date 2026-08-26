@@ -12,6 +12,7 @@ const show = (v, unit) =>
   : String(v)
 
 export default function Boards() {
+  const [tab, setTab] = useState('boards')
   const [boards, setBoards] = useState([])
   const [people, setPeople] = useState([])
   const [sel, setSel] = useState(null)
@@ -50,7 +51,20 @@ export default function Boards() {
             sub={`of ${boards.length}`} />
         </div>
 
-        <Sortable ids={boards.map(b => b.id)}
+        <div style={{ display: 'flex', gap: 7, marginBottom: 18 }}>
+          {[['boards', 'Boards'], ['standards', 'Score standards']].map(([k, l]) => (
+            <button key={k} onClick={() => setTab(k)}
+              style={{ borderRadius: 8, padding: '8px 14px', fontSize: 13,
+                fontWeight: 600, cursor: 'pointer', fontFamily: F,
+                background: tab === k ? C.ink : C.card,
+                border: `1px solid ${tab === k ? C.ink : C.line}`,
+                color: tab === k ? C.bg : C.sub }}>{l}</button>
+          ))}
+        </div>
+
+        {tab === 'standards' && <Standards />}
+
+        {tab === 'boards' && <Sortable ids={boards.map(b => b.id)}
           onReorder={ids => {
             api.reorderBoards(ids)
             setBoards(ids.map(id => boards.find(b => b.id === id)))
@@ -105,9 +119,9 @@ export default function Boards() {
               </div>
             </div>
           ))}
-        </Sortable>
+        </Sortable>}
 
-        {quiet.length > 0 && (
+        {tab === 'boards' && quiet.length > 0 && (
           <div style={{ background: C.card, border: `1px solid ${C.line}`,
             borderRadius: 13, padding: 15, marginTop: 22, boxShadow: C.shadow,
             maxWidth: 620 }}>
@@ -189,6 +203,79 @@ export default function Boards() {
         <div style={{ fontSize: 11, color: A.mute, marginTop: 11, lineHeight: 1.5,
           width: 300 }}>
           Real standings, live. Tap a board on the left to see it.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* The standards behind the Salus Score. Editable, because they are
+   judgements rather than facts — a coach should be able to argue
+   with them and move them. */
+function Standards() {
+  const [rows, setRows] = useState([])
+  const [err, setErr] = useState(null)
+  const load = () => api.listStandards().then(setRows).catch(e => setErr(e.message))
+  useEffect(() => { load() }, [])
+
+  const asTime = r => r.unit === 'time'
+  const fmtV = (v, r) => asTime(r) ? fmt(Number(v)) : String(v)
+
+  const groups = ['m', 'f'].map(sex => ({
+    sex, label: sex === 'm' ? 'Men' : 'Women',
+    rows: rows.filter(r => r.sex === sex),
+  }))
+
+  return (
+    <div>
+      <p style={{ ...T.body, marginBottom: 18, maxWidth: 600 }}>
+        Each test is scored 0 to 100 between a floor and a target. Floor is
+        "just started", target is "genuinely strong for the Open category" —
+        deliberately not elite, because a score nobody can reach is a score
+        nobody engages with.
+      </p>
+      {err && <div style={{ color: C.red, fontSize: 13,
+        marginBottom: 14 }}>{err}</div>}
+
+      {groups.map(g => (
+        <div key={g.sex} style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.13em',
+            color: C.mute, marginBottom: 10 }}>{g.label.toUpperCase()}</div>
+          <div style={{ display: 'grid',
+            gridTemplateColumns: 'minmax(0,1fr) 110px 110px 96px', gap: 8,
+            fontSize: 10.5, color: C.mute, fontWeight: 600, marginBottom: 6,
+            padding: '0 2px' }}>
+            <div>Test</div><div>Floor — 0 pts</div><div>Target — 100 pts</div>
+            <div>Scored as</div>
+          </div>
+          {g.rows.map(r => (
+            <div key={r.id} style={{ display: 'grid',
+              gridTemplateColumns: 'minmax(0,1fr) 110px 110px 96px', gap: 8,
+              marginBottom: 7, alignItems: 'center' }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, paddingLeft: 2 }}>
+                {r.label}
+              </div>
+              <Save value={r.floor_v}
+                onSave={v => api.setStandard(r.id, { floor_v: Number(v) })} />
+              <Save value={r.target_v}
+                onSave={v => api.setStandard(r.id, { target_v: Number(v) })} />
+              <div style={{ fontSize: 11.5, color: C.sub }}>
+                {r.per_kg ? 'per kg bodyweight'
+                  : r.unit === 'time' ? 'seconds' : r.unit}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+
+      <div style={{ background: C.card, border: `1px solid ${C.line}`,
+        borderRadius: 12, padding: 14, maxWidth: 600, boxShadow: C.shadow }}>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Two things worth knowing</div>
+        <div style={{ ...T.body, fontSize: 12.5, marginTop: 6 }}>
+          Times are in seconds — 1200 is a twenty-minute 5km. And the squat is
+          scored <b style={{ color: C.ink }}>per kilo of bodyweight</b>, so 1.75
+          means one and three-quarter times what they weigh. Without that it's
+          just a board for heavy people.
         </div>
       </div>
     </div>

@@ -20,6 +20,7 @@ import Half     from './screens/Half'
 import Effort   from './screens/Effort'
 import Complete from './screens/Complete'
 import Tabs     from './components/Tabs'
+import { SkeletonToday } from './components/Skeleton'
 import Admin    from './admin/Admin'
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
   const [linkErr, setLinkErr] = useState(null)
 
   const [tab, setTab] = useState('today')
+  const [coaches, setCoaches] = useState(false)
   const [screen, setScreen] = useState(null)   // null | session | half | effort | done
   const [active, setActive] = useState(null)   // the session being worked
   const [result, setResult] = useState(null)
@@ -127,9 +129,7 @@ export default function App() {
   if (recovery) return (
     <Shell><SetPassword cfg={cfg} onDone={() => setRecovery(false)} /></Shell>
   )
-  if (!profile) return (
-    <Shell><div style={{ padding: 46 }}><p style={T.body}>Loading…</p></div></Shell>
-  )
+  if (!profile) return <Shell><SkeletonToday /></Shell>
 
   /* ---------- back office ---------- */
   // Deliberately outside Shell: the member layout is phone-width, and
@@ -180,6 +180,14 @@ export default function App() {
     </Shell>
   )
 
+  /* ---------- coaches, reached from You ---------- */
+  if (coaches) return (
+    <Shell>
+      <Coaches userId={session.user.id} profile={profile}
+        onBack={() => setCoaches(false)} />
+    </Shell>
+  )
+
   /* ---------- tabs ---------- */
   const open = s => {
     setActive(s)
@@ -189,15 +197,17 @@ export default function App() {
   return (
     <Shell>
       {tab === 'today'   && <Today profile={profile} week={week}
-                              programme={programme} half={half} onOpen={open} />}
+                              programme={programme} half={half} onOpen={open}
+                              onSetRace={() => setTab('you')} />}
       {tab === 'plan'    && <Plan week={week} programme={programme} onOpen={open} />}
       {tab === 'board'   && <Board profile={profile}
                               onShare={() => patch({ share_on_leaderboard: true })} />}
-      {tab === 'coaches' && <Coaches userId={session.user.id} profile={profile} />}
+
       {tab === 'you'     && <You userId={session.user.id} profile={profile}
                               benchmarks={benchmarks} setBenchmarks={setBenchmarks}
                               theme={theme} setTheme={t => patch({ theme: t })}
-                              half={half} onUpdate={patch} />}
+                              half={half} onUpdate={patch}
+                              onCoaches={() => setCoaches(true)} />}
       <Tabs tab={tab} setTab={setTab} />
     </Shell>
   )

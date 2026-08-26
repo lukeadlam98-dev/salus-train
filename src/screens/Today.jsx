@@ -3,29 +3,36 @@ import { C, T } from '../lib/theme'
 import { DAYS, daysUntil, hhmm } from '../lib/format'
 import { getSessions, getNotices, getProgrammes } from '../lib/data'
 import { Card, Label, Btn, Tag, Ico, I, Mark, Sheet, page } from '../components/ui'
+import { SkeletonToday } from '../components/Skeleton'
+import Empty from '../components/Empty'
 import Photo from '../components/Photo'
 import { P } from '../lib/theme'
 
-export default function Today({ profile, week, programme, half, onOpen }) {
+export default function Today({ profile, week, programme, half, onOpen, onSetRace }) {
   const [sessions, setSessions] = useState([])
   const [notices, setNotices] = useState([])
   const [programmes, setProgrammes] = useState([])
   const [day, setDay] = useState(new Date().getDay() || 7)
   const [notice, setNotice] = useState(null)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (!week) return
-    getSessions(week.id).then(setSessions)
-    getNotices().then(setNotices)
-    getProgrammes().then(setProgrammes)
+    if (!week) { setReady(true); return }
+    Promise.all([
+      getSessions(week.id).then(setSessions),
+      getNotices().then(setNotices),
+      getProgrammes().then(setProgrammes),
+    ]).finally(() => setReady(true))
   }, [week])
+
+  if (!ready) return <SkeletonToday />
 
   const days = daysUntil(profile?.race_date)
   const today = sessions.find(s => s.day === day)
   const first = profile?.name ? profile.name.split(' ')[0] : ''
 
   return (
-    <div style={page}>
+    <div style={page} className="stagger">
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.035em' }}>
@@ -61,6 +68,16 @@ export default function Today({ profile, week, programme, half, onOpen }) {
       </div>
 
       {/* countdown */}
+      {days === null && (
+        <div style={{ marginTop: 16 }}>
+          <Empty quiet icon={I.cal}
+            title="No race in the diary"
+            body="Set your day at ExCeL and everything else — the countdown, the phases, the taper — lines up behind it."
+            action="Set my race day"
+            onAction={onSetRace} />
+        </div>
+      )}
+
       {days !== null && (
         <Card style={{ marginTop: 16 }}>
           <Label style={{ color: C.g }}>
@@ -85,11 +102,13 @@ export default function Today({ profile, week, programme, half, onOpen }) {
           </div>
           {half?.projected && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 14,
-              padding: '12px 13px', background: C.card2, borderRadius: 12 }}>
+              padding: '12px 13px', background: C.card2, borderRadius: 12,
+              animation: 'glow 2.2s ease-out 1' }}>
               <div style={{ flex: 1, fontSize: 13, color: C.sub, lineHeight: 1.4 }}>
                 Projected finish from your half
               </div>
-              <div style={{ fontSize: 19, fontWeight: 800, color: C.g, ...T.num }}>
+              <div style={{ fontSize: 19, fontWeight: 800, color: C.g, ...T.num,
+                animation: 'rise .5s ease-out' }}>
                 {hhmm(half.projected)}
               </div>
             </div>
@@ -98,6 +117,14 @@ export default function Today({ profile, week, programme, half, onOpen }) {
       )}
 
       {/* today's session */}
+      {sessions.length === 0 && (
+        <div style={{ marginTop: 11 }}>
+          <Empty icon={I.cal}
+            title="Your week isn't written yet"
+            body="The coaches are still putting this block together. It'll be here before Monday." />
+        </div>
+      )}
+
       {today && (today.cover_url && today.kind !== 'rest' ? (
         <div style={{ marginTop: 11 }}>
           <Photo src={today.cover_url} dim={1.05} radius={18} style={{ minHeight: 258 }}>

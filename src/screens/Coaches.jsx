@@ -3,7 +3,7 @@ import { C, T, F } from '../lib/theme'
 import { getCoaches, getMessages, sendMessage } from '../lib/data'
 import { Card, Label, Btn, Avatar, Back, Ico, I, Chip, page } from '../components/ui'
 
-export default function Coaches({ userId, profile }) {
+export default function Coaches({ userId, profile, onBack }) {
   const [coaches, setCoaches] = useState([])
   const [msgs, setMsgs] = useState({})
   const [view, setView] = useState({ screen: 'list' })
@@ -53,7 +53,8 @@ export default function Coaches({ userId, profile }) {
 
   return (
     <div style={page}>
-      <h1 style={T.h1}>Coaches</h1>
+      <Back onClick={onBack} />
+      <h1 style={{ ...T.h1, marginTop: 20 }}>Coaches</h1>
       <p style={{ ...T.body, marginTop: 5 }}>Message any of the team directly.</p>
       <div style={{ marginTop: 18 }}>
         {coaches.map(c => {

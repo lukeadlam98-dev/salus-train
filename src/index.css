@@ -17,11 +17,57 @@ button { -webkit-appearance: none; }
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; }
 
+/* Motion is for marking moments, not decorating them. Four things
+   earn an animation: arriving on a screen, a sheet coming up, a set
+   being logged, and a number that has just changed. Everything else
+   moves because it has to. */
+
 @keyframes fade  { from { opacity: 0 } to { opacity: 1 } }
-@keyframes up    { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none } }
+@keyframes up    { from { opacity: 0; transform: translateY(10px) }
+                   to   { opacity: 1; transform: none } }
 @keyframes sheet { from { transform: translateY(101%) } to { transform: none } }
 @keyframes spin  { to { transform: rotate(360deg) } }
 @keyframes pulse { 0%,100% { opacity: .4 } 50% { opacity: 1 } }
+
+/* A logged set. Overshoots slightly, because a tick that just appears
+   doesn't feel like anything happened. */
+@keyframes pop {
+  0%   { transform: scale(.86) }
+  55%  { transform: scale(1.07) }
+  100% { transform: scale(1) }
+}
+
+/* A number that has changed — a new projected finish, a score going up. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(7px) }
+  to   { opacity: 1; transform: none }
+}
+
+/* Loading shapes. Deliberately slow: a fast shimmer reads as anxious. */
+@keyframes shimmer {
+  0%, 100% { opacity: .55 }
+  50%      { opacity: 1 }
+}
+
+/* Something worth noticing, once. Used on a first projected finish. */
+@keyframes glow {
+  0%   { box-shadow: 0 0 0 0 var(--gLine) }
+  70%  { box-shadow: 0 0 0 12px transparent }
+  100% { box-shadow: 0 0 0 0 transparent }
+}
+
+/* Staggered arrival, so a list assembles rather than snapping in. */
+.stagger > * { animation: up .34s cubic-bezier(.2,.7,.3,1) both }
+.stagger > *:nth-child(1) { animation-delay: 0ms }
+.stagger > *:nth-child(2) { animation-delay: 45ms }
+.stagger > *:nth-child(3) { animation-delay: 90ms }
+.stagger > *:nth-child(4) { animation-delay: 130ms }
+.stagger > *:nth-child(5) { animation-delay: 165ms }
+.stagger > *:nth-child(n+6) { animation-delay: 195ms }
+
+/* Anything tappable acknowledges the tap. */
+button:active, [role="button"]:active { transform: scale(.985) }
+button { transition: transform .12s ease, background .18s ease, opacity .18s ease }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001s !important; transition-duration: .001s !important }

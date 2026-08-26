@@ -180,10 +180,13 @@ export async function listNotices() {
     .order('published_at', { ascending: false })
   return data || []
 }
-export const addNotice = () =>
-  supabase.from('notices')
-    .insert({ tag: 'THE ROOM', title: 'New notice', body: '' })
+export async function addNotice(row = {}) {
+  const { data, error } = await supabase.from('notices')
+    .insert({ tag: 'THE ROOM', title: 'New notice', body: '', ...row })
     .select().single()
+  if (error) throw error
+  return data
+}
 export async function setNotice(id, patch) {
   const { error } = await supabase.from('notices').update(patch).eq('id', id)
   if (error) throw error
@@ -316,4 +319,77 @@ export async function getBoardRows(board) {
   })).filter(r => r.v != null)
   rows.sort((a, b) => board.lower_wins ? a.v - b.v : b.v - a.v)
   return rows
+}
+
+/* ---------------- test standards ---------------- */
+export async function listStandards() {
+  const { data, error } = await supabase
+    .from('test_standards').select('*').order('ord').order('sex')
+  if (error) throw error
+  return data || []
+}
+export async function setStandard(id, patch) {
+  const { error } = await supabase.from('test_standards').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+/* ---------------- dashboard ---------------- */
+export async function getRecentActivity(limit = 12) {
+  const { data } = await supabase.from('recent_activity')
+    .select('*').limit(limit)
+  return data || []
+}
+
+// Everything half-written, so it can be fixed before a member finds it.
+export async function getNeedsWork(programmeId) {
+  let q = supabase.from('sessions_needing_work').select('*')
+  if (programmeId) q = q.eq('programme_id', programmeId)
+  const { data } = await q
+  return data || []
+}
+
+// Sessions logged per week, for the volume chart.
+export async function getWeeklyVolume(weeks = 8) {
+  const since = new Date(Date.now() - weeks * 7 * 86400000).toISOString()
+  const { data } = await supabase.from('workout_logs')
+    .select('started_at, user_id').gte('started_at', since)
+  const buckets = Array.from({ length: weeks }, () => 0)
+  ;(data || []).forEach(r => {
+    const wksAgo = Math.floor((Date.now() - new Date(r.started_at)) / (7 * 86400000))
+    const i = weeks - 1 - wksAgo
+    if (i >= 0 && i < weeks) buckets[i]++
+  })
+  return buckets
+}
+
+/* ---------------- club-wide ---------------- */
+// Every programme with its real numbers attached, for the club view.
+export async function getClubOverview() {
+  const [progs, members, weeks] = await Promise.all([
+    supabase.from('programmes').select('*').order('sort'),
+    supabase.from('member_overview').select('*'),
+    supabase.from('weeks').select('id, idx, programme_id, published'),
+  ])
+  const people = (members.data || []).filter(m => m.role !== 'admin')
+  const wk = weeks.data || []
+
+  return (progs.data || []).map(p => {
+    const mine = people.filter(m => m.programme_id === p.id)
+    const ws = wk.filter(w => w.programme_id === p.id)
+    return {
+      ...p,
+      members: mine.length,
+      weeksLive: ws.filter(w => w.published).length,
+      weeksTotal: ws.length,
+      active: mine.filter(m => m.last_trained &&
+        (Date.now() - new Date(m.last_trained)) < 7 * 86400000).length,
+    }
+  })
+}
+
+// Members carry programme_id, but member_overview didn't expose it.
+export async function getAllMembers() {
+  const { data } = await supabase.from('profiles')
+    .select('id, name, programme_id, role, created_at')
+  return data || []
 }

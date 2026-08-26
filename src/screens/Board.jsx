@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { C, T } from '../lib/theme'
 import { fmt, hhmm } from '../lib/format'
 import { getBoards, getBoardRows } from '../lib/data'
-import { Card, Label, Medal, Avatar, Btn, page } from '../components/ui'
+import { Card, Label, Medal, Avatar, Btn, Ico, I, page } from '../components/ui'
+import { SkeletonList } from '../components/Skeleton'
+import Empty from '../components/Empty'
 
 const show = (v, unit) =>
   v == null ? '—'
@@ -15,10 +17,15 @@ export default function Board({ profile, onShare }) {
   const [sel, setSel] = useState(null)
   const [rows, setRows] = useState([])
 
+  const [ready, setReady] = useState(false)
+
   useEffect(() => {
     getBoards().then(b => { setBoards(b); if (b.length) setSel(b[0]) })
+      .finally(() => setReady(true))
   }, [])
   useEffect(() => { if (sel) getBoardRows(sel).then(setRows) }, [sel?.id])
+
+  if (!ready) return <SkeletonList rows={6} />
 
   return (
     <div style={page}>
@@ -58,13 +65,17 @@ export default function Board({ profile, onShare }) {
       )}
 
       {rows.length === 0 ? (
-        <Card style={{ marginTop: 18 }}>
-          <div style={T.body}>
-            Nobody on this board yet. First one sets the bar.
-          </div>
-        </Card>
+        <div style={{ marginTop: 18 }}>
+          <Empty icon={I.chart}
+            title="Nobody here yet"
+            body={profile?.share_on_leaderboard
+              ? 'Do the test and you\u2019ll be the first name on it.'
+              : 'Be the first. Share your numbers and set the bar for everyone else.'}
+            action={profile?.share_on_leaderboard ? null : 'Share my numbers'}
+            onAction={onShare} />
+        </div>
       ) : (
-        <Card style={{ marginTop: 18, padding: '4px 15px' }}>
+        <Card style={{ marginTop: 18, padding: '4px 15px' }} className="stagger">
           {rows.map((r, i) => {
             const me = r.name === profile?.name
             return (
@@ -73,8 +84,15 @@ export default function Board({ profile, onShare }) {
                 borderTop: i ? `1px solid ${C.line}` : 'none' }}>
                 <Medal rank={i + 1} />
                 <Avatar name={r.name} size={30} />
-                <div style={{ flex: 1, fontSize: 15.5, fontWeight: 700,
-                  color: me ? C.g : C.ink }}>{r.name}{me ? ' · you' : ''}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15.5, fontWeight: 700,
+                    color: me ? C.g : C.ink }}>{r.name}{me ? ' · you' : ''}</div>
+                  {r.sub && (
+                    <div style={{ fontSize: 12, color: C.mute, marginTop: 1 }}>
+                      {r.sub} tests
+                    </div>
+                  )}
+                </div>
                 <div style={{ fontSize: 16, fontWeight: 800,
                   fontVariantNumeric: 'tabular-nums' }}>
                   {show(r.v, sel?.unit)}

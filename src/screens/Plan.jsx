@@ -3,10 +3,18 @@ import { C, T } from '../lib/theme'
 import { DAYS } from '../lib/format'
 import { getSessions } from '../lib/data'
 import { Card, Label, Tag, page } from '../components/ui'
+import { SkeletonList } from '../components/Skeleton'
+import Empty from '../components/Empty'
 
 export default function Plan({ week, programme, onOpen }) {
   const [sessions, setSessions] = useState([])
-  useEffect(() => { if (week) getSessions(week.id).then(setSessions) }, [week])
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    if (!week) { setReady(true); return }
+    getSessions(week.id).then(setSessions).finally(() => setReady(true))
+  }, [week])
+
+  if (!ready) return <SkeletonList rows={7} />
 
   return (
     <div style={page}>
@@ -27,6 +35,14 @@ export default function Plan({ week, programme, onOpen }) {
         ))}
       </div>
 
+      {sessions.length === 0 && (
+        <div style={{ marginTop: 16 }}>
+          <Empty title="This week isn't written yet"
+            body="It'll be here before Monday." />
+        </div>
+      )}
+
+      {sessions.length > 0 && (
       <Card style={{ marginTop: 16, padding: '3px 15px' }}>
         {sessions.map((s, i) => (
           <div key={s.id} onClick={() => s.kind !== 'rest' && onOpen(s)}
@@ -49,6 +65,7 @@ export default function Plan({ week, programme, onOpen }) {
           </div>
         ))}
       </Card>
+      )}
     </div>
   )
 }

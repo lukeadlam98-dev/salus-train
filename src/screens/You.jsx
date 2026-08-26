@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { C, T, PAL } from '../lib/theme'
 import { fmt, hhmm, toSecs, daysUntil } from '../lib/format'
-import { saveBenchmark } from '../lib/data'
+import { saveBenchmark, getMyScore } from '../lib/data'
 import { Card, Label, Btn, Avatar, Ico, I, page } from '../components/ui'
+import Empty from '../components/Empty'
 import { RACE_DAYS, DIVISIONS } from './Onboard'
+import Score from './Score'
 import Keypad from '../components/Keypad'
 
 const BM = [
@@ -16,9 +18,13 @@ const BM = [
 ]
 
 export default function You({ userId, profile, benchmarks, setBenchmarks,
-                              theme, setTheme, half, onUpdate }) {
+                              theme, setTheme, half, onUpdate, onCoaches }) {
   const [pad, setPad] = useState(null)
   const [editRace, setEditRace] = useState(false)
+  const [score, setScore] = useState(null)
+
+  useEffect(() => { getMyScore(userId).then(setScore).catch(() => {}) },
+    [userId, benchmarks, half?.total])
 
   const squat = benchmarks.squat?.value_num
   const bw = benchmarks.bw?.value_num
@@ -58,6 +64,14 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
         </div>
       </div>
 
+      {!half?.projected && Object.keys(benchmarks).length === 0 && (
+        <div style={{ marginTop: 22 }}>
+          <Empty icon={I.target}
+            title="Nothing measured yet"
+            body="Week one is five tests. Put the numbers in as you do them and every weight and pace in the block calculates itself." />
+        </div>
+      )}
+
       {half?.projected && (
         <Card style={{ marginTop: 20, border: `1px solid ${C.gLine}` }}>
           <Label style={{ color: C.g }}>PROJECTED FINISH</Label>
@@ -67,6 +81,12 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
             From your week 1 half of {hhmm(half.total)}
           </div>
         </Card>
+      )}
+
+      {score?.rows?.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <Score score={score} />
+        </div>
       )}
 
       <Label style={{ margin: '26px 0 11px' }}>YOUR BENCHMARKS</Label>
@@ -187,6 +207,19 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
           </Card>
         )
       })}
+
+      <Label style={{ margin: '26px 0 11px' }}>COACHES</Label>
+      <Card onClick={onCoaches}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 600 }}>Message a coach</div>
+            <div style={{ ...T.small, marginTop: 3 }}>
+              Loads, swaps, a session you had to miss.
+            </div>
+          </div>
+          <Ico d={I.chev} s={14} c={C.mute} w={2} />
+        </div>
+      </Card>
 
       {profile?.role === 'admin' && (
         <>

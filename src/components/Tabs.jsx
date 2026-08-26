@@ -1,12 +1,18 @@
 import { C, F } from '../lib/theme'
 import { Ico, I, Mark } from './ui'
 
+// Four, not five.
+//
+// Coaches came out. Messaging is one-way until a coach can reply, and
+// even then it isn't a daily-use destination — it's something you do
+// when you have a question. It lives on You, and next to the coach's
+// notes inside a session, which is where the question actually occurs
+// to someone.
 const ITEMS = [
-  ['today',   'Today',   null],
-  ['plan',    'Plan',    I.cal],
-  ['board',   'Board',   I.chart],
-  ['coaches', 'Coaches', I.msg],
-  ['you',     'You',     I.user],
+  ['today', 'Today', null],
+  ['plan',  'Plan',  I.cal],
+  ['board', 'Board', I.chart],
+  ['you',   'You',   I.user],
 ]
 
 export default function Tabs({ tab, setTab }) {
@@ -16,7 +22,7 @@ export default function Tabs({ tab, setTab }) {
       bottom: 'calc(13px + env(safe-area-inset-bottom))',
       maxWidth: 492, margin: '0 auto',
       background: C.sheet, border: `1px solid ${C.line}`, borderRadius: 999,
-      padding: 5, display: 'grid', gridTemplateColumns: 'repeat(5,1fr)',
+      padding: 5, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
       zIndex: 60, boxShadow: C.shadow,
     }}>
       {ITEMS.map(([k, label, d]) => {

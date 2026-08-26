@@ -1,8 +1,8 @@
 import { C, F, T, P, card } from '../lib/theme'
 import { LOGO } from '../lib/photos'
 
-export const Card = ({ children, style, onClick }) => (
-  <div onClick={onClick}
+export const Card = ({ children, style, onClick, className }) => (
+  <div onClick={onClick} className={className}
     style={{ ...card, cursor: onClick ? 'pointer' : 'default', ...style }}>
     {children}
   </div>
@@ -149,22 +149,64 @@ export const Ico = ({ d, s = 17, c = C.ink, w = 1.9 }) => (
 )
 
 // The logo can be set in the back office; LOGO is the fallback.
-export const Mark = ({ s = 30, onPhoto, src }) => (
-  // The logo is a PNG, so it can't take a colour the way an SVG would.
-  // Instead the light theme inverts it — see markFilter in theme.js.
-  // On a photo it always stays light, so no filter there.
-  <img
-    src={src || LOGO}
-    alt=""
-    width={s}
-    height={s}
-    style={{
-      display: 'block',
-      width: s, height: s, objectFit: 'contain',
-      filter: onPhoto ? 'none' : C.markFilter,
-    }}
-  />
-)
+// The Salus mark.
+//
+// Three ways it can be supplied, in order of preference:
+//
+//   1. An SVG string in SVG_MARK below. Sharp at any size, takes its
+//      colour from currentColor, and adds nothing to load time. This
+//      is what it should be.
+//   2. A PNG URL, from the back office or LOGO. Works, but goes soft
+//      on a retina screen and can't recolour — so the light theme
+//      inverts it, which is a fudge.
+//   3. Nothing, in which case the placeholder sunburst below renders.
+//
+// To do it properly: open the logo in Illustrator, select it, then
+// Object → Image Trace → Make, then Expand. That turns the pixels
+// into paths. Export as SVG, open the file in a text editor, and
+// paste the contents between the backticks. Strip any fill="#..."
+// so it inherits colour.
+const SVG_MARK = ``
+
+export const Mark = ({ s = 30, onPhoto, src, c }) => {
+  const colour = c || (onPhoto ? P.ink : C.ink)
+
+  // 1. real vector
+  if (SVG_MARK.trim()) return (
+    <span
+      style={{ display: 'block', width: s, height: s, color: colour }}
+      dangerouslySetInnerHTML={{
+        __html: SVG_MARK
+          .replace(/width="[^"]*"/, `width="${s}"`)
+          .replace(/height="[^"]*"/, `height="${s}"`)
+          .replace(/fill="(?!none)[^"]*"/g, 'fill="currentColor"')
+          .replace(/stroke="(?!none)[^"]*"/g, 'stroke="currentColor"'),
+      }} />
+  )
+
+  // 2. a bitmap
+  if (src || LOGO) return (
+    <img src={src || LOGO} alt="" width={s} height={s}
+      style={{ display: 'block', width: s, height: s, objectFit: 'contain',
+        filter: onPhoto ? 'none' : C.markFilter }} />
+  )
+
+  // 3. placeholder — twenty rays, alternating length
+  return (
+    <svg width={s} height={s} viewBox="0 0 40 40" fill="none"
+      style={{ display: 'block' }}>
+      {Array.from({ length: 20 }).map((_, i) => {
+        const a = (i / 20) * Math.PI * 2 - Math.PI / 2
+        const long = i % 2 === 0
+        const r1 = long ? 7 : 9.5, r2 = long ? 18 : 15
+        return <line key={i}
+          x1={20 + Math.cos(a) * r1} y1={20 + Math.sin(a) * r1}
+          x2={20 + Math.cos(a) * r2} y2={20 + Math.sin(a) * r2}
+          strokeWidth="2.2" strokeLinecap="round" style={{ stroke: colour }} />
+      })}
+    </svg>
+  )
+}
 
 export const page = {
   minHeight: '100%', padding: '46px 16px 110px', maxWidth: 520, margin: '0 auto',

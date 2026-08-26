@@ -52,8 +52,10 @@ export default function Half({ userId, splits, setSplits, multiplier, onBack }) 
 
       <Card style={{ marginTop: 18 }}>
         <Label>{r.complete ? 'PROJECTED FINISH' : 'ELAPSED'}</Label>
-        <div style={{ fontSize: 46, fontWeight: 900, letterSpacing: '-.05em',
-          lineHeight: 1, marginTop: 7, ...T.num }}>
+        <div key={r.complete ? 'done' : r.done}
+          style={{ fontSize: 46, fontWeight: 900, letterSpacing: '-.05em',
+            lineHeight: 1, marginTop: 7, ...T.num,
+            animation: 'rise .45s ease-out' }}>
           {r.complete ? hhmm(r.projected) : (hhmm(r.total) || '0:00')}
         </div>
         <div style={{ ...T.body, fontSize: 13.5, marginTop: 7 }}>

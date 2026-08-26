@@ -9,12 +9,14 @@ import SessionEditor from './SessionEditor'
 import Home from './Home'
 import Members from './Members'
 import Boards from './Boards'
+import Dashboard from './Dashboard'
+import Club from './Club'
 
 export default function Admin({ profile, onExit }) {
   const [programmes, setProgrammes] = useState([])
   const [prog, setProg] = useState(null)
   const [weeks, setWeeks] = useState([])
-  const [nav, setNav] = useState({ view: 'week', idx: 1 })
+  const [nav, setNav] = useState({ view: 'club', idx: 1 })
   const [session, setSession] = useState(null)
   const [newProg, setNewProg] = useState(false)
   const [err, setErr] = useState(null)
@@ -29,8 +31,7 @@ export default function Admin({ profile, onExit }) {
     : Promise.resolve()
 
   useEffect(() => { if (profile?.role === 'admin') loadProgrammes() }, [profile])
-  useEffect(() => { if (prog) { loadWeeks(); setNav({ view: 'week', idx: 1 });
-    setSession(null) } }, [prog?.id])
+  useEffect(() => { if (prog) { loadWeeks(); setSession(null) } }, [prog?.id])
 
   if (profile?.role !== 'admin') return (
     <div style={{ padding: 60, maxWidth: 460, margin: '0 auto' }}>
@@ -86,7 +87,11 @@ export default function Admin({ profile, onExit }) {
           </div>
         </div>
 
-        <SideLabel>PROGRAMME</SideLabel>
+        <SideItem on={nav.view === 'club'} onClick={() => go('club')}>
+          <span style={{ flex: 1 }}>The club</span>
+        </SideItem>
+
+        <SideLabel style={{ marginTop: 18 }}>PROGRAMME</SideLabel>
         <select value={prog?.id || ''}
           onChange={e => setProg(programmes.find(p => p.id === e.target.value))}
           style={{ width: '100%', background: C.card2, color: C.ink,
@@ -106,7 +111,11 @@ export default function Admin({ profile, onExit }) {
           + New programme
         </button>
 
-        <SideLabel>WEEKS</SideLabel>
+        <SideItem on={nav.view === 'dashboard'} onClick={() => go('dashboard')}>
+          <span style={{ flex: 1 }}>Overview</span>
+        </SideItem>
+
+        <SideLabel style={{ marginTop: 14 }}>WEEKS</SideLabel>
         {weeks.map(w => (
           <SideItem key={w.id} on={nav.view === 'week' && nav.idx === w.idx}
             onClick={() => go('week', w.idx)}>
@@ -160,6 +169,13 @@ export default function Admin({ profile, onExit }) {
         {session
           ? <SessionEditor session={session} week={week}
               onBack={() => setSession(null)} />
+          : nav.view === 'club'
+            ? <Club
+                onOpenProgramme={p => { setProg(p); setNav({ view: 'dashboard', idx: 1 }) }}
+                onGo={v => { setSession(null); setNav({ view: v, idx: nav.idx }) }} />
+          : nav.view === 'dashboard'
+            ? <Dashboard programme={prog}
+                onGo={(v, idx) => { setSession(null); setNav({ view: v, idx: idx ?? nav.idx }) }} />
           : nav.view === 'week' && week
             ? <WeekView week={week} programme={prog} onOpen={setSession}
                 onChanged={() => { loadWeeks(); loadProgrammes() }} />
@@ -351,7 +367,7 @@ function Notices() {
       <Head title="Notices"
         sub="These appear on Today under 'What's on at Salus'."
         action={<Btn small tone="solid"
-          onClick={() => api.addNotice().then(load)}>Add notice</Btn>} />
+          onClick={() => api.addNotice().then(load).catch(console.error)}>Add notice</Btn>} />
       {rows.map(n => (
         <Panel key={n.id} style={{ marginBottom: 11 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr',

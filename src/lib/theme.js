@@ -47,13 +47,44 @@ export const P = { ink: '#F6F2EC', sub: 'rgba(246,242,236,.72)' }
 
 export const F = "'Inter', -apple-system, system-ui, sans-serif"
 
+// ---------------------------------------------------------------
+//  Type scale
+//
+//  Eight sizes on a 1.2 ratio, and nothing outside them. The sizes
+//  before this were picked one at a time — 13, 13.5, 14.5, 15.5 —
+//  which reads fine but isn't a system, and it shows the moment
+//  anyone else adds a screen.
+//
+//  Anything that isn't in here should be a good enough reason to
+//  add it here.
+// ---------------------------------------------------------------
+export const SIZE = {
+  display: 44,   // the countdown, a projected finish
+  xl:      31,   // a screen someone lands on
+  h1:      25,   // screen titles
+  h2:      20,   // section titles
+  h3:      17,   // card titles
+  body:    15,   // reading
+  small:   13,   // secondary, captions
+  micro:   11,   // labels, timestamps
+}
+
 export const T = {
-  h1:    { fontSize: 26, fontWeight: 800, letterSpacing: '-.035em', margin: 0 },
-  h2:    { fontSize: 22, fontWeight: 800, letterSpacing: '-.03em', margin: 0 },
-  h3:    { fontSize: 18, fontWeight: 800, letterSpacing: '-.025em', margin: 0 },
-  label: { fontSize: 11, fontWeight: 800, letterSpacing: '.14em', color: C.mute },
-  body:  { fontSize: 14.5, color: C.sub, lineHeight: 1.55 },
-  num:   { fontVariantNumeric: 'tabular-nums' },
+  display: { fontSize: SIZE.display, fontWeight: 900, letterSpacing: '-.05em',
+             lineHeight: 1, fontVariantNumeric: 'tabular-nums' },
+  xl:      { fontSize: SIZE.xl, fontWeight: 800, letterSpacing: '-.04em',
+             lineHeight: 1.1, margin: 0 },
+  h1:      { fontSize: SIZE.h1, fontWeight: 800, letterSpacing: '-.035em',
+             lineHeight: 1.15, margin: 0 },
+  h2:      { fontSize: SIZE.h2, fontWeight: 800, letterSpacing: '-.03em',
+             lineHeight: 1.2, margin: 0 },
+  h3:      { fontSize: SIZE.h3, fontWeight: 800, letterSpacing: '-.025em',
+             lineHeight: 1.25, margin: 0 },
+  body:    { fontSize: SIZE.body, color: C.sub, lineHeight: 1.55 },
+  small:   { fontSize: SIZE.small, color: C.sub, lineHeight: 1.5 },
+  label:   { fontSize: SIZE.micro, fontWeight: 800, letterSpacing: '.14em',
+             color: C.mute },
+  num:     { fontVariantNumeric: 'tabular-nums' },
 }
 
 export const card = { background: C.card, borderRadius: 18, padding: 17, boxShadow: C.shadow }
