@@ -8,7 +8,7 @@ import Video from '../components/Video'
 // Four things on screen: the mark, the line, two fields, one button.
 // Everything else — sign up, reset, magic link — is behind one quiet
 // link, because on any given morning none of it is what you came for.
-export default function Auth({ cfg = {} }) {
+export default function Auth({ cfg = {}, linkErr, clearLinkErr }) {
   const [step, setStep] = useState('login')   // login | help | signup | sent | reset
   const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')
@@ -16,6 +16,8 @@ export default function Auth({ cfg = {} }) {
   const [busy, setBusy] = useState(false)
 
   const addr = () => email.trim().toLowerCase()
+  // A dead link says so, rather than silently dumping them here.
+  const shown = err || linkErr
   const ok = email.trim().length > 4 && pw.length >= 6
 
   async function login() {
@@ -135,12 +137,16 @@ export default function Auth({ cfg = {} }) {
               </button>
             </div>
 
-            {err && (
+            {shown && (
               <p style={{ fontSize: 12.5, color: '#FFB3A3', marginTop: 12,
-                marginBottom: 0, textAlign: 'center' }}>{err}</p>
+                marginBottom: 0, textAlign: 'center', lineHeight: 1.5 }}>
+                {linkErr && !err
+                  ? 'That link has expired. Ask for a fresh one.'
+                  : shown}
+              </p>
             )}
 
-            <button onClick={() => { setStep('help'); setErr(null) }}
+            <button onClick={() => { setStep('help'); setErr(null); clearLinkErr?.() }}
               style={quiet}>Trouble logging in?</button>
           </div>
         )}
