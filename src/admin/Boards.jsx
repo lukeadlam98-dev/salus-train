@@ -71,7 +71,10 @@ export default function Boards() {
                   <Pick value={b.unit || 'time'}
                     options={[['time', 'A time'], ['kg', 'Kilograms'],
                               ['reps', 'Reps']]}
-                    onChange={v => { api.setBoard(b.id, { unit: v }); load() }} />
+                    onChange={async v => {
+                      await api.setBoard(b.id, { unit: v })
+                      await load()
+                    }} />
                   <Pick value={b.lower_wins ? 'low' : 'high'}
                     options={[['low', 'Lower wins'], ['high', 'Higher wins']]}
                     onChange={v => {

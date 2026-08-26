@@ -20,7 +20,13 @@ export default function SessionEditor({ session, week, onBack }) {
   useEffect(() => { setS(session); load(); api.listMovements().then(setMovements) },
     [session.id])
 
-  const patch = p => { api.setSession(s.id, p); setS({ ...s, ...p }) }
+  // Optimistic: show it straight away, then write. If the write fails
+  // the next load corrects it — better than a field that appears to do
+  // nothing for half a second.
+  const patch = async p => {
+    setS(prev => ({ ...prev, ...p }))
+    await api.setSession(s.id, p)
+  }
   const isRest = s.kind === 'rest'
 
   return (

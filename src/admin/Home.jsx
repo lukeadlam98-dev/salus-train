@@ -12,12 +12,23 @@ export default function Home() {
   const [programmes, setProgrammes] = useState([])
   const [cfg, setCfg] = useState({})
   const [tab, setTab] = useState('sections')
+  const [err, setErr] = useState(null)
+
+  // Anything that writes goes through here, so a failure says so
+  // rather than looking like nothing happened.
+  const run = async fn => {
+    setErr(null)
+    try { await fn() } catch (e) { setErr(e.message || 'That didn\u2019t save.') }
+  }
 
   const loadS = () => api.listSections().then(setSections)
   const loadP = () => api.listProgrammes().then(setProgrammes)
   useEffect(() => { loadS(); loadP(); api.getConfig().then(setCfg) }, [])
 
-  const patchCfg = (k, v) => { api.setConfig(k, v); setCfg({ ...cfg, [k]: v }) }
+  const patchCfg = (k, v) => run(async () => {
+    await api.setConfig(k, v)
+    setCfg(c => ({ ...c, [k]: v }))
+  })
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px',
@@ -29,6 +40,12 @@ export default function Home() {
           What they see when they open the app. Drag to reorder, switch off what
           you don't want, and the phone on the right keeps up.
         </p>
+
+        {err && (
+          <div style={{ background: C.card, border: `1px solid ${C.line}`,
+            borderRadius: 10, padding: '11px 14px', fontSize: 13, color: C.red,
+            marginTop: 16, lineHeight: 1.5 }}>{err}</div>
+        )}
 
         <div style={{ display: 'flex', gap: 7, margin: '22px 0 18px' }}>
           {[['sections', 'Sections'], ['programmes', 'Programmes'],
@@ -94,7 +111,10 @@ export default function Home() {
                   marginBottom: 9, display: 'flex', gap: 13 }}>
                   <div style={{ paddingTop: 20 }}><Grip /></div>
                   <ImagePicker value={p.cover_url}
-                    onChange={v => { api.setProgramme(p.id, { cover_url: v }); loadP() }} />
+                    onChange={v => run(async () => {
+                      await api.setProgramme(p.id, { cover_url: v })
+                      await loadP()
+                    })} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'grid',
                       gridTemplateColumns: 'minmax(0,1fr) 74px', gap: 8 }}>
@@ -113,7 +133,10 @@ export default function Home() {
                       marginTop: 10 }}>
                       <Toggle on={p.live}
                         label={p.live ? 'Live' : 'Coming soon'}
-                        onChange={v => { api.setProgramme(p.id, { live: v }); loadP() }} />
+                        onChange={v => run(async () => {
+                          await api.setProgramme(p.id, { live: v })
+                          await loadP()
+                        })} />
                       <div style={{ flex: 1 }} />
                       <Confirm onConfirm={() =>
                         api.deleteProgramme(p.id).then(loadP)} />

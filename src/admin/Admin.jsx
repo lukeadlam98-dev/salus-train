@@ -368,7 +368,10 @@ function Notices() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14,
             marginTop: 12 }}>
             <Toggle on={n.pinned} label="Pinned"
-              onChange={v => { api.setNotice(n.id, { pinned: v }); load() }} />
+              onChange={async v => {
+                await api.setNotice(n.id, { pinned: v })
+                await load()
+              }} />
             <div style={{ flex: 1 }} />
             <Confirm onConfirm={() => api.deleteNotice(n.id).then(load)} />
           </div>

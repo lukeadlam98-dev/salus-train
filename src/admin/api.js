@@ -50,8 +50,10 @@ export async function listSessions(weekId) {
   return data || []
 }
 
-export const setSession = (id, patch) =>
-  supabase.from('sessions').update(patch).eq('id', id)
+export async function setSession(id, patch) {
+  const { error } = await supabase.from('sessions').update(patch).eq('id', id)
+  if (error) throw error
+}
 export const deleteSession = id =>
   supabase.from('sessions').delete().eq('id', id)
 
@@ -182,8 +184,10 @@ export const addNotice = () =>
   supabase.from('notices')
     .insert({ tag: 'THE ROOM', title: 'New notice', body: '' })
     .select().single()
-export const setNotice = (id, patch) =>
-  supabase.from('notices').update(patch).eq('id', id)
+export async function setNotice(id, patch) {
+  const { error } = await supabase.from('notices').update(patch).eq('id', id)
+  if (error) throw error
+}
 export const deleteNotice = id =>
   supabase.from('notices').delete().eq('id', id)
 
@@ -229,8 +233,10 @@ export async function listSections() {
   if (error) throw error
   return data || []
 }
-export const setSection = (id, patch) =>
-  supabase.from('home_sections').update(patch).eq('id', id)
+export async function setSection(id, patch) {
+  const { error } = await supabase.from('home_sections').update(patch).eq('id', id)
+  if (error) throw error
+}
 
 export async function reorderSections(ids) {
   await Promise.all(ids.map((id, i) =>
@@ -242,8 +248,10 @@ export async function listProgrammes() {
   const { data } = await supabase.from('programmes').select('*').order('sort')
   return data || []
 }
-export const setProgramme = (id, patch) =>
-  supabase.from('programmes').update(patch).eq('id', id)
+export async function setProgramme(id, patch) {
+  const { error } = await supabase.from('programmes').update(patch).eq('id', id)
+  if (error) throw error
+}
 export const addProgramme = () =>
   supabase.from('programmes').insert({
     slug: `programme-${Date.now()}`, name: 'New programme', weeks: 8, live: false,
@@ -263,8 +271,11 @@ export async function getConfig() {
   ;(data || []).forEach(r => { out[r.key] = r.value })
   return out
 }
-export const setConfig = (key, value) =>
-  supabase.from('config').upsert({ key, value }, { onConflict: 'key' })
+export async function setConfig(key, value) {
+  const { error } = await supabase.from('config')
+    .upsert({ key, value }, { onConflict: 'key' })
+  if (error) throw error
+}
 
 /* ---------------- leaderboards ---------------- */
 export async function listBoards() {
@@ -273,8 +284,10 @@ export async function listBoards() {
   if (error) throw error
   return data || []
 }
-export const setBoard = (id, patch) =>
-  supabase.from('leaderboards').update(patch).eq('id', id)
+export async function setBoard(id, patch) {
+  const { error } = await supabase.from('leaderboards').update(patch).eq('id', id)
+  if (error) throw error
+}
 export const deleteBoard = id =>
   supabase.from('leaderboards').delete().eq('id', id)
 export async function reorderBoards(ids) {
