@@ -247,21 +247,46 @@ export async function reorderSections(ids) {
 }
 
 /* ---------------- programmes ---------------- */
-export async function listProgrammes() {
-  const { data } = await supabase.from('programmes').select('*').order('sort')
+export async function listProgrammes({ includeArchived = false } = {}) {
+  let q = supabase.from('programmes').select('*').order('sort')
+  if (!includeArchived) q = q.eq('archived', false)
+  const { data } = await q
   return data || []
 }
 export async function setProgramme(id, patch) {
   const { error } = await supabase.from('programmes').update(patch).eq('id', id)
   if (error) throw error
 }
-export const addProgramme = () =>
-  supabase.from('programmes').insert({
-    slug: `programme-${Date.now()}`, name: 'New programme', weeks: 8, live: false,
-    sort: 99,
+export async function addProgramme() {
+  // Sort goes to the end, but not 99 — that collided once several
+  // existed and left the ordering ambiguous.
+  const { data: existing } = await supabase.from('programmes').select('sort')
+  const next = Math.max(0, ...(existing || []).map(p => p.sort || 0)) + 1
+  const { data, error } = await supabase.from('programmes').insert({
+    slug: `programme-${Date.now()}`, name: 'Untitled programme',
+    weeks: 8, live: false, sort: next,
   }).select().single()
-export const deleteProgramme = id =>
-  supabase.from('programmes').delete().eq('id', id)
+  if (error) throw error
+  return data
+}
+export async function programmeContents(id) {
+  const { data, error } = await supabase.rpc('programme_contents', { p_id: id })
+  if (error) throw error
+  return data?.[0] || { weeks: 0, sessions: 0, blocks: 0, members: 0, logs: 0 }
+}
+
+export async function deleteProgramme(id, moveTo = null) {
+  const { error } = await supabase.rpc('delete_programme', {
+    p_id: id, p_move_to: moveTo,
+  })
+  if (error) throw error
+}
+
+export async function archiveProgramme(id, archived = true) {
+  const { error } = await supabase.from('programmes')
+    .update({ archived, live: archived ? false : undefined }).eq('id', id)
+  if (error) throw error
+}
 export async function reorderProgrammes(ids) {
   await Promise.all(ids.map((id, i) =>
     supabase.from('programmes').update({ sort: i + 1 }).eq('id', id)))
@@ -366,7 +391,7 @@ export async function getWeeklyVolume(weeks = 8) {
 // Every programme with its real numbers attached, for the club view.
 export async function getClubOverview() {
   const [progs, members, weeks] = await Promise.all([
-    supabase.from('programmes').select('*').order('sort'),
+    supabase.from('programmes').select('*').eq('archived', false).order('sort'),
     supabase.from('member_overview').select('*'),
     supabase.from('weeks').select('id, idx, programme_id, published'),
   ])

@@ -8,7 +8,7 @@ import Empty from '../components/Empty'
 import Photo from '../components/Photo'
 import { P } from '../lib/theme'
 
-export default function Today({ profile, week, programme, half, onOpen, onSetRace }) {
+export default function Today({ profile, week, programme, half, onOpen, onSetRace, sections }) {
   const [sessions, setSessions] = useState([])
   const [notices, setNotices] = useState([])
   const [programmes, setProgrammes] = useState([])
@@ -192,26 +192,56 @@ export default function Today({ profile, week, programme, half, onOpen, onSetRac
         </Card>
       ))}
 
-      {/* notices */}
+      {/* notices — a board, not a feed */}
       {notices.length > 0 && (
         <>
-          <Label style={{ margin: '26px 0 11px' }}>WHAT'S ON AT SALUS</Label>
-          {notices.map(n => (
-            <Card key={n.id} onClick={() => setNotice(n)}
-              style={{ marginBottom: 10, padding: '14px 15px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                {n.pinned && <span style={{ width: 5, height: 5, borderRadius: 999,
-                  background: C.g }} />}
-                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.12em',
-                  color: n.pinned ? C.g : C.mute }}>{n.tag}</span>
+          <Label style={{ margin: '26px 0 12px' }}>
+            {sections?.notices?.heading || "WHAT'S ON AT SALUS"}
+          </Label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+            {notices.map(n => (
+              <div key={n.id} onClick={() => setNotice(n)}
+                style={{
+                  position: 'relative',
+                  background: C.card,
+                  border: `1px solid ${n.pinned ? C.gLine : 'transparent'}`,
+                  borderRadius: 14,
+                  padding: '17px 15px 15px',
+                  cursor: 'pointer',
+                  boxShadow: C.shadow,
+                }}>
+                {/* the pin, so a pinned notice reads as pinned rather
+                    than just being first */}
+                {n.pinned && (
+                  <div style={{ position: 'absolute', top: -8, right: 14,
+                    width: 22, height: 22, borderRadius: 999, background: C.g,
+                    display: 'grid', placeItems: 'center' }}>
+                    <Ico d={I.pin} s={11} c={C.bg} w={2.2} />
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9,
+                  paddingRight: n.pinned ? 26 : 0 }}>
+                  <span style={{ fontSize: 9.5, fontWeight: 800,
+                    letterSpacing: '.13em',
+                    color: n.pinned ? C.g : C.mute }}>{n.tag}</span>
+                  <div style={{ flex: 1 }} />
+                  <span style={{ fontSize: 10.5, color: C.mute }}>
+                    {new Date(n.published_at).toLocaleDateString('en-GB',
+                      { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 700, marginTop: 7,
+                  letterSpacing: '-.02em', lineHeight: 1.3 }}>{n.title}</div>
+                {n.body && (
+                  <div style={{ ...T.small, marginTop: 5,
+                    display: '-webkit-box', WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {n.body}
+                  </div>
+                )}
               </div>
-              <div style={{ fontSize: 16, fontWeight: 700, marginTop: 6,
-                letterSpacing: '-.02em', lineHeight: 1.3 }}>{n.title}</div>
-              <div style={{ fontSize: 13, color: C.sub, marginTop: 4, lineHeight: 1.45,
-                display: '-webkit-box', WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.body}</div>
-            </Card>
-          ))}
+            ))}
+          </div>
         </>
       )}
 

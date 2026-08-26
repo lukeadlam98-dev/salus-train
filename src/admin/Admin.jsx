@@ -10,6 +10,7 @@ import Home from './Home'
 import Members from './Members'
 import Boards from './Boards'
 import Dashboard from './Dashboard'
+import Notices from './Notices'
 import Club from './Club'
 
 export default function Admin({ profile, onExit }) {
@@ -353,46 +354,6 @@ function WeekView({ week, programme, onOpen, onChanged }) {
           </button>
         ))}
       </div>
-    </div>
-  )
-}
-
-/* ---------------- notices ---------------- */
-function Notices() {
-  const [rows, setRows] = useState([])
-  const load = () => api.listNotices().then(setRows)
-  useEffect(() => { load() }, [])
-  return (
-    <div style={{ maxWidth: 720 }}>
-      <Head title="Notices"
-        sub="These appear on Today under 'What's on at Salus'."
-        action={<Btn small tone="solid"
-          onClick={() => api.addNotice().then(load).catch(console.error)}>Add notice</Btn>} />
-      {rows.map(n => (
-        <Panel key={n.id} style={{ marginBottom: 11 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr',
-            gap: 9 }}>
-            <Save value={n.tag} placeholder="RACE DAY"
-              onSave={v => api.setNotice(n.id, { tag: v.toUpperCase() })} />
-            <Save value={n.title} placeholder="Headline"
-              onSave={v => api.setNotice(n.id, { title: v })} />
-          </div>
-          <div style={{ marginTop: 9 }}>
-            <Save value={n.body} rows={3} placeholder="The detail…"
-              onSave={v => api.setNotice(n.id, { body: v })} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14,
-            marginTop: 12 }}>
-            <Toggle on={n.pinned} label="Pinned"
-              onChange={async v => {
-                await api.setNotice(n.id, { pinned: v })
-                await load()
-              }} />
-            <div style={{ flex: 1 }} />
-            <Confirm onConfirm={() => api.deleteNotice(n.id).then(load)} />
-          </div>
-        </Panel>
-      ))}
     </div>
   )
 }

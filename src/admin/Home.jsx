@@ -3,6 +3,7 @@ import { C, T, F } from '../lib/theme'
 import { A, previewVars } from './theme'
 import * as api from './api'
 import { Save, Field, Toggle, Btn, ImagePicker, Confirm, Sortable, Grip } from './widgets'
+import DeleteProgramme from './DeleteProgramme'
 
 // The members' home, arranged from here rather than from code.
 // Left: the sections, in order, with switches. Right: a phone showing
@@ -13,6 +14,8 @@ export default function Home() {
   const [cfg, setCfg] = useState({})
   const [tab, setTab] = useState('sections')
   const [err, setErr] = useState(null)
+  const [showArchived, setShowArchived] = useState(false)
+  const [deleting, setDeleting] = useState(null)
 
   // Anything that writes goes through here, so a failure says so
   // rather than looking like nothing happened.
@@ -22,7 +25,8 @@ export default function Home() {
   }
 
   const loadS = () => api.listSections().then(setSections)
-  const loadP = () => api.listProgrammes().then(setProgrammes)
+  const loadP = () => api.listProgrammes({ includeArchived: true })
+    .then(setProgrammes)
   useEffect(() => { loadS(); loadP(); api.getConfig().then(setCfg) }, [])
 
   const patchCfg = (k, v) => run(async () => {
@@ -95,20 +99,32 @@ export default function Home() {
 
         {tab === 'programmes' && (
           <>
-            <div style={{ display: 'flex', marginBottom: 12 }}>
-              <div style={{ flex: 1 }} />
-              <Btn small tone="solid"
-                onClick={() => api.addProgramme().then(loadP)}>Add programme</Btn>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ ...T.body, fontSize: 12.5, flex: 1 }}>
+                New ones arrive as Coming soon. Switch them Live when the
+                first week is published.
+              </div>
+              <Btn small tone="solid" onClick={() => run(async () => {
+                await api.addProgramme()
+                await loadP()
+              })}>Add programme</Btn>
             </div>
-            <Sortable ids={programmes.map(p => p.id)}
+            {programmes.some(p => p.archived) && (
+              <div style={{ marginBottom: 12 }}>
+                <Toggle on={showArchived} label="Show archived"
+                  onChange={setShowArchived} />
+              </div>
+            )}
+            <Sortable ids={programmes.filter(p => showArchived || !p.archived).map(p => p.id)}
               onReorder={ids => {
                 api.reorderProgrammes(ids)
                 setProgrammes(ids.map(id => programmes.find(p => p.id === id)))
               }}>
-              {programmes.map(p => (
+              {programmes.filter(p => showArchived || !p.archived).map(p => (
                 <div key={p.id} style={{ background: C.card, borderRadius: 13,
                   border: `1px solid ${C.line}`, boxShadow: C.shadow, padding: 14,
-                  marginBottom: 9, display: 'flex', gap: 13 }}>
+                  marginBottom: 9, display: 'flex', gap: 13,
+                  opacity: p.archived ? .5 : 1 }}>
                   <div style={{ paddingTop: 20 }}><Grip /></div>
                   <ImagePicker value={p.cover_url}
                     onChange={v => run(async () => {
@@ -138,8 +154,14 @@ export default function Home() {
                           await loadP()
                         })} />
                       <div style={{ flex: 1 }} />
-                      <Confirm onConfirm={() =>
-                        api.deleteProgramme(p.id).then(loadP)} />
+                      {p.archived ? (
+                        <Btn small tone="line" onClick={() => run(async () => {
+                          await api.archiveProgramme(p.id, false); await loadP()
+                        })}>Bring back</Btn>
+                      ) : (
+                        <Btn small tone="line"
+                          onClick={() => setDeleting(p)}>Archive or delete</Btn>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -207,7 +229,15 @@ export default function Home() {
         )}
       </div>
 
-      <HomePreview sections={sections} programmes={programmes} cfg={cfg} />
+      <HomePreview sections={sections}
+        programmes={programmes.filter(p => !p.archived)} cfg={cfg} />
+
+      {deleting && (
+        <DeleteProgramme programme={deleting}
+          programmes={programmes.filter(p => !p.archived)}
+          onClose={() => setDeleting(null)}
+          onDone={async () => { setDeleting(null); await loadP() }} />
+      )}
     </div>
   )
 }
@@ -223,8 +253,8 @@ function HomePreview({ sections, programmes, cfg }) {
       <div style={{ ...previewVars, width: 300, background: '#0B0A09',
         borderRadius: 26, border: '1px solid #2B2926', padding: 8,
         boxShadow: '0 12px 40px rgba(26,22,19,.22)' }}>
-        <div style={{ background: '#0B0A09', borderRadius: 20, height: 560,
-          overflowY: 'auto', padding: 13, color: '#EFEAE1' }}>
+        <div className="nb" style={{ background: '#0B0A09', borderRadius: 20,
+          height: 560, overflowY: 'auto', padding: 13, color: '#EFEAE1' }}>
           {on.map(s => <Block key={s.id} s={s} programmes={programmes} cfg={cfg} />)}
           {on.length === 0 && (
             <div style={{ fontSize: 12.5, color: '#635C54', padding: '40px 0',
@@ -317,8 +347,10 @@ function Block({ s, programmes, cfg }) {
   if (s.key === 'programmes') return (
     <>
       {s.heading && <div style={head}>{s.heading}</div>}
+      {/* All of them, not the first three — the app shows every one,
+          and a preview that quietly truncates is worse than no preview. */}
       {(programmes.length ? programmes : [{ id: 0, name: 'Road to HYROX', live: true }])
-        .slice(0, 3).map(p => (
+        .map(p => (
         <div key={p.id} style={{ ...card, padding: 0, overflow: 'hidden',
           opacity: p.live ? 1 : .6 }}>
           <div style={{ height: 72, padding: 10, display: 'flex',

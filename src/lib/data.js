@@ -50,7 +50,8 @@ export async function getMyProgramme() {
   const { data } = await supabase.from('my_programme').select('*').maybeSingle()
   if (data) return data
   const { data: fallback } = await supabase
-    .from('programmes').select('*').eq('live', true).order('sort').limit(1).maybeSingle()
+    .from('programmes').select('*').eq('live', true).eq('archived', false)
+    .order('sort').limit(1).maybeSingle()
   return fallback
     ? { programme_id: fallback.id, slug: fallback.slug, name: fallback.name,
         total_weeks: fallback.weeks, race_name: fallback.race_name,
@@ -107,7 +108,8 @@ export async function getSessionDetail(sessionId) {
 }
 
 export async function getProgrammes() {
-  const { data } = await supabase.from('programmes').select('*').order('sort')
+  const { data } = await supabase.from('programmes')
+    .select('*').eq('archived', false).order('sort')
   return data || []
 }
 
