@@ -160,31 +160,53 @@ export const Grip = () => (
     padding: '0 2px', userSelect: 'none' }} title="Drag to reorder">⠿</div>
 )
 
-/* Upload or choose a photo. */
+/* Upload or choose a photo.
+   The file input is a real <label> wrapping a real <input>, rather than
+   a hidden input triggered by a ref. Refs into hidden inputs fail
+   silently in a few browsers and there is no error when they do — you
+   just click and nothing happens. A label always opens the picker. */
 export function ImagePicker({ value, onChange, wide, kind = 'image' }) {
   const [open, setOpen] = useState(false)
   const [files, setFiles] = useState([])
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
-  const input = useRef(null)
+  const [note, setNote] = useState(null)
   const isVideo = kind === 'video'
 
-  useEffect(() => {
-    if (!open) return
-    listImages(kind).then(setFiles).catch(e => setErr(e.message))
-  }, [open, kind])
+  const refresh = () => listImages(kind).then(setFiles).catch(e => setErr(e.message))
+  useEffect(() => { if (open) { setErr(null); setNote(null); refresh() } }, [open, kind])
 
-  async function upload(e) {
+  async function onFile(e) {
     const file = e.target.files?.[0]
+    e.target.value = ''            // so picking the same file twice still fires
     if (!file) return
-    setBusy(true); setErr(null)
+
+    const tooBig = file.size > (isVideo ? 20 : 8) * 1024 * 1024
+    if (tooBig) {
+      setErr(`That file is ${(file.size / 1024 / 1024).toFixed(1)}MB. ` +
+        (isVideo ? 'Keep videos under 20MB — ideally under 2.'
+                 : 'Keep photos under 8MB.'))
+      return
+    }
+
+    setBusy(true); setErr(null); setNote(`Uploading ${file.name}…`)
     try {
       const url = await uploadImage(file)
       await onChange(url)
-      setFiles(await listImages(kind))
+      await refresh()
+      setNote(null)
       setOpen(false)
-    } catch (e) { setErr(e.message) }
+    } catch (e) {
+      setErr(e.message || 'Upload failed.')
+      setNote(null)
+    }
     setBusy(false)
+  }
+
+  const uploadBtn = {
+    display: 'inline-block', background: C.ink, color: C.bg, borderRadius: 8,
+    padding: '7px 14px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+    fontFamily: F, opacity: busy ? .5 : 1,
   }
 
   return (
@@ -212,27 +234,40 @@ export function ImagePicker({ value, onChange, wide, kind = 'image' }) {
 
       {open && (
         <>
-          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,.72)', zIndex: 200 }} />
+          <div onClick={() => !busy && setOpen(false)} style={{ position: 'fixed',
+            inset: 0, background: 'rgba(26,22,19,.6)', zIndex: 200 }} />
           <div style={{ position: 'fixed', inset: '7% 8%', zIndex: 210,
             background: C.card, borderRadius: 16, padding: 22, overflowY: 'auto',
-            maxWidth: 900, margin: '0 auto',
-            border: `1px solid ${C.line}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 18 }}>
+            maxWidth: 900, margin: '0 auto', border: `1px solid ${C.line}`,
+            boxShadow: '0 24px 70px rgba(26,22,19,.28)' }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
               <div style={{ ...T.h3 }}>{isVideo ? 'Videos' : 'Photos'}</div>
               <div style={{ flex: 1 }} />
-              <Btn small tone="solid" disabled={busy}
-                onClick={() => input.current?.click()}>
-                {busy ? 'Uploading…' : 'Upload'}
-              </Btn>
+              <label style={uploadBtn}>
+                {busy ? 'Uploading…' : `Upload ${isVideo ? 'a video' : 'a photo'}`}
+                <input type="file" disabled={busy}
+                  accept={isVideo ? 'video/mp4,video/webm' : 'image/*'}
+                  onChange={onFile}
+                  style={{ position: 'absolute', width: 1, height: 1,
+                    opacity: 0, pointerEvents: 'none' }} />
+              </label>
               <Btn small tone="line" style={{ marginLeft: 8 }}
-                onClick={() => setOpen(false)}>Close</Btn>
+                onClick={() => !busy && setOpen(false)}>Close</Btn>
             </div>
-            <input ref={input} type="file"
-              accept={isVideo ? 'video/mp4,video/webm' : 'image/*'}
-              onChange={upload} style={{ display: 'none' }} />
-            {err && <div style={{ color: C.red, fontSize: 13,
-              marginBottom: 12 }}>{err}</div>}
+
+            <div style={{ fontSize: 11.5, color: C.mute, marginBottom: 16 }}>
+              {isVideo
+                ? 'MP4 or WebM. Under 2MB is the target — 20MB is the hard limit.'
+                : 'JPEG or PNG, up to 8MB. Around 1400px wide is plenty.'}
+            </div>
+
+            {note && <div style={{ fontSize: 13, color: C.sub,
+              marginBottom: 12 }}>{note}</div>}
+            {err && <div style={{ fontSize: 13, color: C.red, marginBottom: 12,
+              background: C.card2, borderRadius: 9, padding: '10px 12px',
+              lineHeight: 1.5 }}>{err}</div>}
+
             <div style={{ display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 11 }}>
               {files.map(f => (
@@ -252,9 +287,10 @@ export function ImagePicker({ value, onChange, wide, kind = 'image' }) {
                 </button>
               ))}
             </div>
+
             {files.length === 0 && !err && (
               <div style={{ ...T.body, padding: '40px 0', textAlign: 'center' }}>
-                No {isVideo ? 'videos' : 'photos'} uploaded yet.
+                No {isVideo ? 'videos' : 'photos'} in the bucket yet.
               </div>
             )}
           </div>
