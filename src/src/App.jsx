@@ -3,12 +3,11 @@ import { supabase } from './lib/supabase'
 import { PAL, vars, C, F, T } from './lib/theme'
 import {
   getProfile, updateProfile, getBenchmarks, getWeek,
-  getHalf, getMultiplier, getMyProgramme, getConfig,
+  getHalf, getMultiplier,
 } from './lib/data'
 import { summarise, DEFAULT_MULTIPLIER } from './lib/half'
 
 import Auth     from './screens/Auth'
-import SetPassword from './screens/SetPassword'
 import Onboard  from './screens/Onboard'
 import Today    from './screens/Today'
 import Plan     from './screens/Plan'
@@ -20,7 +19,6 @@ import Half     from './screens/Half'
 import Effort   from './screens/Effort'
 import Complete from './screens/Complete'
 import Tabs     from './components/Tabs'
-import { SkeletonToday } from './components/Skeleton'
 import Admin    from './admin/Admin'
 
 export default function App() {
@@ -30,15 +28,10 @@ export default function App() {
   const [profile, setProfile] = useState(null)
   const [benchmarks, setBenchmarks] = useState({})
   const [week, setWeek] = useState(null)
-  const [programme, setProgramme] = useState(null)
   const [splits, setSplits] = useState({})
   const [multiplier, setMultiplier] = useState(DEFAULT_MULTIPLIER)
-  const [cfg, setCfg] = useState({})
-  const [recovery, setRecovery] = useState(false)
-  const [linkErr, setLinkErr] = useState(null)
 
   const [tab, setTab] = useState('today')
-  const [coaches, setCoaches] = useState(false)
   const [screen, setScreen] = useState(null)   // null | session | half | effort | done
   const [active, setActive] = useState(null)   // the session being worked
   const [result, setResult] = useState(null)
@@ -48,33 +41,12 @@ export default function App() {
     () => new URLSearchParams(window.location.search).has('admin'))
 
   /* ---------- auth ---------- */
-  // The splash needs the media config before anyone has signed in,
-  // so this runs on its own rather than waiting for a session.
-  useEffect(() => { getConfig().then(setCfg).catch(() => {}) }, [])
-
   useEffect(() => {
-    // A link that has expired or been used comes back with the reason
-    // in the URL. Without this the app just shows the login screen
-    // again and the member has no idea why.
-    const hash = new URLSearchParams(window.location.hash.slice(1))
-    if (hash.get('error_description')) {
-      setLinkErr(hash.get('error_description').replace(/\+/g, ' '))
-      window.history.replaceState({}, '', window.location.pathname)
-    }
-
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session); setReady(true)
-    })
-
-    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true) })
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s)
-
-      // Arriving from a reset link. Supabase has signed them in with a
-      // recovery session; the app owes them a screen to set the password
-      // on, or they land in the app with the old one still live.
-      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
-
-      // Clear a spent token out of the address bar.
+      // Once the link has been swapped for a session, take the token out
+      // of the address bar — a spent link left in history is just clutter.
       if (s && (window.location.hash.includes('access_token') ||
                 window.location.search.includes('code='))) {
         window.history.replaceState({}, '', window.location.pathname)
@@ -91,13 +63,11 @@ export default function App() {
 
     ;(async () => {
       try {
-        const [p, b, m, prog] = await Promise.all([
-          getProfile(uid), getBenchmarks(uid), getMultiplier(), getMyProgramme(),
+        const [p, b, w, m] = await Promise.all([
+          getProfile(uid), getBenchmarks(uid), getWeek(1), getMultiplier(),
         ])
         if (cancelled) return
-        setProfile(p); setBenchmarks(b); setMultiplier(m); setProgramme(prog)
-        const w = await getWeek(1, prog?.programme_id)
-        if (!cancelled) setWeek(w)
+        setProfile(p); setBenchmarks(b); setWeek(w); setMultiplier(m)
         const h = await getHalf(uid)
         if (!cancelled) setSplits(h.splits)
       } catch (e) { console.error(e) }
@@ -122,26 +92,17 @@ export default function App() {
   )
 
   if (!ready) return <div style={{ minHeight: '100dvh', background: '#0B0A09' }} />
-  if (!session) return <Shell><Auth cfg={cfg} linkErr={linkErr}
-    clearLinkErr={() => setLinkErr(null)} /></Shell>
-
-  /* ---------- arrived from a reset link ---------- */
-  if (recovery) return (
-    <Shell><SetPassword cfg={cfg} onDone={() => setRecovery(false)} /></Shell>
+  if (!session) return <Shell><Auth /></Shell>
+  if (!profile) return (
+    <Shell><div style={{ padding: 46 }}><p style={T.body}>Loading…</p></div></Shell>
   )
-  if (!profile) return <Shell><SkeletonToday /></Shell>
 
   /* ---------- back office ---------- */
-  // Deliberately outside Shell: the member layout is phone-width, and
-  // writing a training block wants the whole screen.
   if (admin) return (
-    <div style={{ ...vars(PAL[theme]), minHeight: '100dvh', background: C.bg,
-      color: C.ink, fontFamily: F }}>
-      <Admin profile={profile} onExit={() => {
-        setAdmin(false)
-        window.history.replaceState({}, '', window.location.pathname)
-      }} />
-    </div>
+    <Shell><Admin profile={profile} onExit={() => {
+      setAdmin(false)
+      window.history.replaceState({}, '', window.location.pathname)
+    }} /></Shell>
   )
 
   /* ---------- first run ---------- */
@@ -180,14 +141,6 @@ export default function App() {
     </Shell>
   )
 
-  /* ---------- coaches, reached from You ---------- */
-  if (coaches) return (
-    <Shell>
-      <Coaches userId={session.user.id} profile={profile}
-        onBack={() => setCoaches(false)} />
-    </Shell>
-  )
-
   /* ---------- tabs ---------- */
   const open = s => {
     setActive(s)
@@ -196,18 +149,15 @@ export default function App() {
 
   return (
     <Shell>
-      {tab === 'today'   && <Today profile={profile} week={week}
-                              programme={programme} half={half} onOpen={open}
-                              onSetRace={() => setTab('you')} />}
-      {tab === 'plan'    && <Plan week={week} programme={programme} onOpen={open} />}
-      {tab === 'board'   && <Board profile={profile} userId={session.user.id}
+      {tab === 'today'   && <Today profile={profile} week={week} half={half} onOpen={open} />}
+      {tab === 'plan'    && <Plan week={week} onOpen={open} />}
+      {tab === 'board'   && <Board profile={profile}
                               onShare={() => patch({ share_on_leaderboard: true })} />}
-
+      {tab === 'coaches' && <Coaches userId={session.user.id} profile={profile} />}
       {tab === 'you'     && <You userId={session.user.id} profile={profile}
                               benchmarks={benchmarks} setBenchmarks={setBenchmarks}
                               theme={theme} setTheme={t => patch({ theme: t })}
-                              half={half} onUpdate={patch}
-                              onCoaches={() => setCoaches(true)} />}
+                              half={half} onUpdate={patch} />}
       <Tabs tab={tab} setTab={setTab} />
     </Shell>
   )

@@ -43,48 +43,13 @@ export async function saveBenchmark(userId, key, { num, secs, week = 1 }) {
 }
 
 /* ---------------- programme content ---------------- */
-
-// Which programme this member is on. Falls back to the first live one
-// so a member with nothing assigned still sees something.
-export async function getMyProgramme() {
-  const { data } = await supabase.from('my_programme').select('*').maybeSingle()
-  if (data) return data
-  const { data: fallback } = await supabase
-    .from('programmes').select('*').eq('live', true).eq('archived', false)
-    .order('sort').limit(1).maybeSingle()
-  return fallback
-    ? { programme_id: fallback.id, slug: fallback.slug, name: fallback.name,
-        total_weeks: fallback.weeks, race_name: fallback.race_name,
-        uses_half: fallback.uses_half }
-    : null
-}
-
-// A week of whichever programme they're on. Only published weeks come
-// back for members — the RLS policy sees to that.
-export async function getWeek(idx = 1, programmeId = null) {
-  let pid = programmeId
-  if (!pid) {
-    const prog = await getMyProgramme()
-    pid = prog?.programme_id
-  }
-  if (!pid) return null
+export async function getWeek(idx = 1, slug = 'road-to-hyrox') {
   const { data, error } = await supabase
     .from('weeks').select('*, programmes!inner(*)')
-    .eq('idx', idx).eq('programme_id', pid).maybeSingle()
+    .eq('idx', idx).eq('programmes.slug', slug).single()
   if (error) throw error
   return data
 }
-
-// Every published week, so the Plan tab knows what exists.
-export async function getPublishedWeeks(programmeId) {
-  const { data } = await supabase
-    .from('weeks').select('idx, phase, note')
-    .eq('programme_id', programmeId).order('idx')
-  return data || []
-}
-
-export const setMyProgramme = (userId, programmeId) =>
-  supabase.from('profiles').update({ programme_id: programmeId }).eq('id', userId)
 
 export async function getSessions(weekId) {
   const { data, error } = await supabase
@@ -108,8 +73,7 @@ export async function getSessionDetail(sessionId) {
 }
 
 export async function getProgrammes() {
-  const { data } = await supabase.from('programmes')
-    .select('*').eq('archived', false).order('sort')
+  const { data } = await supabase.from('programmes').select('*').order('sort')
   return data || []
 }
 
@@ -221,85 +185,4 @@ export async function getLeaderboard() {
   const { data } = await supabase.from('leaderboard_half')
     .select('*').order('projected_s')
   return data || []
-}
-
-/* ---------------- boards ---------------- */
-// Which boards to show, in the order the back office put them.
-export async function getBoards() {
-  const { data } = await supabase
-    .from('leaderboards').select('*').eq('visible', true).order('ord')
-  return data || []
-}
-
-// One board's standings. Sharing is opt-in, enforced by the view.
-export async function getBoardRows(board) {
-  // The Salus Leaderboard: a placing in each of the five tests, summed.
-  if (board.source === 'salus') {
-    const { data } = await supabase.from('salus_leaderboard')
-      .select('*').order('place')
-    return (data || []).map(r => ({
-      name: r.name, v: r.points, position: r.place,
-      sub: r.tests_done < 5 ? `${r.tests_done}/5 tested` : null,
-      ranks: [r.r_squat, r.r_fivek, r.r_ski, r.r_row, r.r_half],
-      tests_done: r.tests_done,
-    }))
-  }
-  if (board.source === 'score') {
-    const { data } = await supabase.from('leaderboard_score')
-      .select('*').not('score', 'is', null).order('score', { ascending: false })
-    return (data || []).map(r => ({ name: r.name, v: r.score, sub: `${r.tests}/5` }))
-  }
-  if (board.source === 'half') {
-    const { data } = await supabase.from('leaderboard_half')
-      .select('*').order('projected_s')
-    return (data || []).map(r => ({ name: r.name, v: r.projected_s }))
-  }
-  const { data } = await supabase.from('leaderboard_benchmarks')
-    .select('*').eq('board_key', board.source)
-  const rows = (data || [])
-    .map(r => ({ name: r.name, v: r.value_s ?? r.value_num }))
-    .filter(r => r.v != null)
-  rows.sort((a, b) => board.lower_wins ? a.v - b.v : b.v - a.v)
-  return rows
-}
-
-/* ---------------- home layout ---------------- */
-// The Today screen's sections, in the order the back office put them.
-export async function getHomeSections() {
-  const { data } = await supabase
-    .from('home_sections').select('*').eq('visible', true).order('ord')
-  return data || []
-}
-
-export async function getConfig() {
-  const { data } = await supabase.from('config').select('*')
-  const out = {}
-  ;(data || []).forEach(r => { out[r.key] = r.value })
-  return out
-}
-
-/* ---------------- the Salus Score ---------------- */
-// Five tests, each scored 0-100 against a fixed standard, averaged.
-export async function getMyScore(userId) {
-  const { data, error } = await supabase.rpc('salus_score', { p_user: userId })
-  if (error) throw error
-  const rows = data || []
-  const overall = rows.length
-    ? Math.round(rows.reduce((a, b) => a + Number(b.score), 0) / rows.length)
-    : null
-  return { rows, overall, tests: rows.length }
-}
-
-export async function getScoreBoard() {
-  const { data } = await supabase.from('leaderboard_score')
-    .select('*').not('score', 'is', null).order('score', { ascending: false })
-  return data || []
-}
-
-// The member's own row, with their five placings broken out.
-export async function getMyLeaderboardRow(userId) {
-  const { data, error } = await supabase
-    .rpc('my_leaderboard_row', { p_user: userId })
-  if (error) throw error
-  return data?.[0] || null
 }

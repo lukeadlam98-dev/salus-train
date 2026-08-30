@@ -250,7 +250,21 @@ export async function reorderSections(ids) {
 export async function listProgrammes({ includeArchived = false } = {}) {
   let q = supabase.from('programmes').select('*').order('sort')
   if (!includeArchived) q = q.eq('archived', false)
-  const { data } = await q
+  const { data, error } = await q
+
+  // If the archived column doesn't exist yet — a migration not run —
+  // the filter fails and this would otherwise return nothing at all,
+  // silently emptying the programme picker. Fall back rather than
+  // pretending there are no programmes.
+  if (error) {
+    if (/archived/i.test(error.message || '')) {
+      const { data: all, error: e2 } = await supabase
+        .from('programmes').select('*').order('sort')
+      if (e2) throw e2
+      return all || []
+    }
+    throw error
+  }
   return data || []
 }
 export async function setProgramme(id, patch) {

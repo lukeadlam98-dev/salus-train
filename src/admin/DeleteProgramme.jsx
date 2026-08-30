@@ -14,7 +14,10 @@ export default function DeleteProgramme({ programme, programmes, onClose, onDone
   const [err, setErr] = useState(null)
 
   useEffect(() => {
-    api.programmeContents(programme.id).then(setCounts).catch(e => setErr(e.message))
+    api.programmeContents(programme.id).then(setCounts).catch(e =>
+      setErr(/schema cache|does not exist|programme_contents/i.test(e.message || '')
+        ? 'This needs sql/13_programme_delete.sql running in Supabase first — it adds the archive column and the delete function.'
+        : e.message))
   }, [programme.id])
 
   const others = programmes.filter(p => p.id !== programme.id)

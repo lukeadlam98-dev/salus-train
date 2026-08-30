@@ -23,9 +23,14 @@ export default function Admin({ profile, onExit }) {
   const [err, setErr] = useState(null)
 
   const loadProgrammes = async () => {
-    const list = await api.listProgrammes()
-    setProgrammes(list)
-    setProg(p => p ? list.find(x => x.id === p.id) || list[0] : list[0])
+    try {
+      const list = await api.listProgrammes()
+      setProgrammes(list)
+      setProg(p => p ? list.find(x => x.id === p.id) || list[0] : list[0])
+      if (list.length === 0) setErr('No programmes found. Has the seed SQL run?')
+    } catch (e) {
+      setErr(`Couldn't load programmes: ${e.message}`)
+    }
   }
   const loadWeeks = () => prog
     ? api.listWeeks(prog.id).then(setWeeks).catch(e => setErr(e.message))

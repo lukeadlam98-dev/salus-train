@@ -19,8 +19,10 @@ export default function Club({ onOpenProgramme, onGo }) {
 
   const loadNotices = () => api.listNotices().then(setNotices).catch(() => {})
 
+  const [err, setErr] = useState(null)
+
   useEffect(() => {
-    api.getClubOverview().then(setProgs).catch(() => {})
+    api.getClubOverview().then(setProgs).catch(e => setErr(e.message))
     api.listMembers().then(setMembers).catch(() => {})
     api.getWeeklyVolume(8).then(setVolume).catch(() => {})
     api.getRecentActivity(5).then(setActivity).catch(() => {})
@@ -43,6 +45,12 @@ export default function Club({ onOpenProgramme, onGo }) {
           color: C.mute }}>THE CLUB</div>
         <h1 style={{ ...T.h1, marginTop: 6 }}>Salus Train</h1>
       </div>
+
+      {err && (
+        <div style={{ background: C.card, border: `1px solid ${C.line}`,
+          borderRadius: 11, padding: '12px 15px', fontSize: 13, color: C.red,
+          marginBottom: 18, lineHeight: 1.5 }}>{err}</div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
         gap: 12, marginBottom: 18 }}>
