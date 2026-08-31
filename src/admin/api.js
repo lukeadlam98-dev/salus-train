@@ -572,3 +572,39 @@ export async function getFloorToday() {
   const { data } = await supabase.rpc('floor_today')
   return data?.[0] || null
 }
+
+/* ---------------- the half multiplier ---------------- */
+export async function getMultiplierState() {
+  const { data } = await supabase.rpc('club_multiplier')
+  return data?.[0] || null
+}
+
+export async function getMultiplierEvidence() {
+  const { data } = await supabase.from('multiplier_evidence').select('*')
+  return data || []
+}
+
+export async function setMultiplier(v) {
+  const { error } = await supabase.from('config')
+    .update({ value: String(v) }).eq('key', 'half_multiplier')
+  if (error) throw error
+}
+
+export async function adoptMeasuredMultiplier() {
+  const { data, error } = await supabase.rpc('adopt_measured_multiplier')
+  if (error) throw error
+  return data
+}
+
+// Workout of the week. Only one at a time — the function clears the
+// old one, so a coach can't leave two set by accident.
+export async function setWotw(sessionId) {
+  const { error } = await supabase.rpc('set_wotw', { p_session: sessionId })
+  if (error) throw error
+}
+
+export async function setWotwMetric(sessionId, metric) {
+  const { error } = await supabase.from('sessions')
+    .update({ wotw_metric: metric }).eq('id', sessionId)
+  if (error) throw error
+}

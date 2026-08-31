@@ -19,6 +19,27 @@ function targetKg(movement, benchmarks) {
   return round2h(base * movement.pct)
 }
 
+// Swipe between blocks.
+//
+// A session is four or five blocks and scrolling past three of them to
+// reach the one you're on is the wrong gesture on a phone you're
+// holding between sets. Left and right move a block at a time; the
+// list still scrolls normally underneath.
+function useSwipe(onLeft, onRight) {
+  const x = useRef(0), y = useRef(0)
+  return {
+    onTouchStart: e => { x.current = e.touches[0].clientX
+                         y.current = e.touches[0].clientY },
+    onTouchEnd: e => {
+      const dx = e.changedTouches[0].clientX - x.current
+      const dy = e.changedTouches[0].clientY - y.current
+      // Ignore anything that was mostly vertical — that's a scroll.
+      if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return
+      dx < 0 ? onLeft() : onRight()
+    },
+  }
+}
+
 export default function Session({ session, userId, benchmarks, onBack, onFinished }) {
   const [blocks, setBlocks] = useState(null)
   const [coach, setCoach] = useState(null)
@@ -260,8 +281,13 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
   const B = blocks[bi]
   const items = B.block_items || []
 
+  const swipe = useSwipe(
+    () => setBi(i => Math.min(i + 1, blocks.length - 1)),
+    () => setBi(i => Math.max(i - 1, 0)),
+  )
+
   return (
-    <div style={{ ...page, paddingBottom: 130 }}>
+    <div {...swipe} style={{ ...page, paddingBottom: 130 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-.03em',
           ...T.num }}>{fmt(t)}</div>

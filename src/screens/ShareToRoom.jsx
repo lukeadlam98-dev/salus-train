@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { C, T, F } from '../lib/theme'
 import { fmt, hhmm } from '../lib/format'
+import { supabase } from '../lib/supabase'
 import { postToRoom } from '../lib/data'
 import { Sheet, Btn, Ico, I, Avatar } from '../components/ui'
 
@@ -24,12 +25,31 @@ export default function ShareToRoom({ userId, profile, workout, session,
   ].filter(Boolean).join(' ')
 
   const [text, setText] = useState(draft)
+  const [photo, setPhoto] = useState(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
 
+  async function pick(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (file.size > 8 * 1024 * 1024) {
+      return setErr(`That's ${(file.size / 1048576).toFixed(1)}MB. Under 8 please.`)
+    }
+    setBusy(true); setErr(null)
+    try {
+      const name = `room/${userId}-${Date.now()}.jpg`
+      const { error } = await supabase.storage.from('Photos')
+        .upload(name, file, { cacheControl: '3600' })
+      if (error) throw error
+      setPhoto(supabase.storage.from('Photos').getPublicUrl(name).data.publicUrl)
+    } catch (e) { setErr(e.message) }
+    setBusy(false)
+  }
+
   async function post() {
     setBusy(true); setErr(null)
-    try { await postToRoom(userId, text.trim()); onPosted?.() }
+    try { await postToRoom(userId, text.trim(), photo); onPosted?.() }
     catch (e) { setErr(e.message); setBusy(false) }
   }
 
@@ -66,11 +86,36 @@ export default function ShareToRoom({ userId, profile, workout, session,
         </div>
       )}
 
+      {photo && (
+        <div style={{ position: 'relative', marginTop: 12 }}>
+          <div style={{ height: 180, borderRadius: 14,
+            background: `#090908 url(${photo}) center/cover` }} />
+          <button onClick={() => setPhoto(null)} style={{ position: 'absolute',
+            top: 9, right: 9, width: 28, height: 28, borderRadius: 999,
+            background: 'rgba(9,9,8,.72)', border: 'none', cursor: 'pointer',
+            display: 'grid', placeItems: 'center' }}>
+            <Ico d={I.close} s={13} c={C.ink} w={2.2} />
+          </button>
+        </div>
+      )}
+
+      {!photo && (
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8,
+          background: C.card2, border: `1px solid ${C.line}`,
+          borderRadius: 999, padding: '11px 16px', fontSize: 13.5,
+          fontWeight: 600, cursor: 'pointer', color: C.ink, marginTop: 12 }}>
+          <Ico d={I.camera} s={15} c={C.sub} w={1.9} />
+          Add a photo
+          <input type="file" accept="image/*" onChange={pick}
+            style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }} />
+        </label>
+      )}
+
       {err && (
         <p style={{ fontSize: 12.5, color: C.red, marginTop: 12 }}>{err}</p>
       )}
 
-      <Btn style={{ marginTop: 20 }} disabled={busy || !text.trim()}
+      <Btn style={{ marginTop: 20 }} disabled={busy || (!text.trim() && !photo)}
         onClick={post}>{busy ? 'Posting…' : 'Post it'}</Btn>
 
       <button onClick={onClose} style={{ width: '100%',

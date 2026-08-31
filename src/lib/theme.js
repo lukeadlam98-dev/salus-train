@@ -131,6 +131,6 @@ export const card = { background: C.card, borderRadius: 18, padding: 17, boxShad
 //   so anything above it clears at 13 + 50 + 13 = 76
 export const FLOAT = {
   bar:   'calc(13px + env(safe-area-inset-bottom))',   // the tab bar itself
-  above: 'calc(76px + env(safe-area-inset-bottom))',   // anything sitting on it
-  clear: 'calc(140px + env(safe-area-inset-bottom))',  // page padding to clear both
+  above: 'calc(86px + env(safe-area-inset-bottom))',   // anything sitting on it
+  clear: 'calc(152px + env(safe-area-inset-bottom))',  // page padding to clear both
 }

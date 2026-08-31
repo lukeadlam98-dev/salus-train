@@ -10,6 +10,7 @@ import Home from './Home'
 import Navigation from './Navigation'
 import Weeks from './Weeks'
 import Floor from './Floor'
+import Multiplier from './Multiplier'
 import Members from './Members'
 import Boards from './Boards'
 import Dashboard from './Dashboard'
@@ -160,7 +161,7 @@ export default function Admin({ profile, onExit }) {
 
         <SideLabel style={{ marginTop: 24 }}>THE APP</SideLabel>
         {[['nav', 'Screens & tabs'], ['home', 'Programmes & words'],
-          ['boards', 'Leaderboards'], ['notices', 'Notices'],
+          ['boards', 'Leaderboards'], ['multiplier', 'The multiplier'], ['notices', 'Notices'],
           ['movements', 'Movements'], ['photos', 'Photos'],
           ['members', 'Members']].map(([k, l]) => (
           <SideItem key={k} on={nav.view === k} onClick={() => go(k)}>
@@ -197,7 +198,8 @@ export default function Admin({ profile, onExit }) {
           : nav.view === 'week' && week
             ? <WeekView week={week} programme={prog} onOpen={setSession}
                 onChanged={() => { loadWeeks(); loadProgrammes() }} />
-            : nav.view === 'floor'     ? <Floor
+            : nav.view === 'multiplier'? <Multiplier />
+          : nav.view === 'floor'     ? <Floor
                                           onOpenMember={id =>
                                             setNav({ view: 'members', member: id })} />
           : nav.view === 'weeks'     ? <Weeks programmeId={prog?.id}

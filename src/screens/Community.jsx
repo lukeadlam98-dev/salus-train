@@ -184,15 +184,24 @@ export default function Community({ profile, userId }) {
                     borderRadius: 16,
                     borderBottomRightRadius: m.mine && !grouped ? 5 : 16,
                     borderBottomLeftRadius: !m.mine && !grouped ? 5 : 16,
-                    padding: '11px 14px', fontSize: 15, lineHeight: 1.45,
+                    padding: m.body ? '11px 14px' : 0,
+                    fontSize: 15, lineHeight: 1.45,
                     opacity: m.pending ? .55 : 1,
                     wordBreak: 'break-word',
+                    display: m.body || m.deleted ? 'block' : 'none',
                   }}>
                     {m.deleted
                       ? <span style={{ fontStyle: 'italic', opacity: .6 }}>
                           Message removed</span>
                       : m.body}
                   </div>
+
+                  {m.photo_url && !m.deleted && (
+                    <div style={{ marginTop: 5, height: 190, borderRadius: 16,
+                      borderBottomRightRadius: m.mine ? 5 : 16,
+                      borderBottomLeftRadius: m.mine ? 16 : 5,
+                      background: `#090908 url(${m.photo_url}) center/cover` }} />
+                  )}
 
                   <div style={{ fontSize: 10.5, color: C.mute, marginTop: 3,
                     textAlign: m.mine ? 'right' : 'left', paddingLeft: 3,

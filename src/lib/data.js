@@ -577,3 +577,9 @@ export async function getWeekSessions(weekId) {
   const { data } = await supabase.rpc('week_sessions', { p_week: weekId })
   return data || []
 }
+
+/* ---------------- workout of the week ---------------- */
+export async function getWotw() {
+  const { data } = await supabase.from('wotw_board').select('*').order('place')
+  return data || []
+}
