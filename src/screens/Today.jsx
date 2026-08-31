@@ -1,27 +1,48 @@
 import { useState, useEffect } from 'react'
 import { C, T } from '../lib/theme'
 import { DAYS, daysUntil, hhmm } from '../lib/format'
-import { getSessions, getNotices, getProgrammes } from '../lib/data'
+import { getSessions, getNotices, getProgrammes, getWeekOutline,
+         getCompletions, getCoaches, getWeekDone } from '../lib/data'
 import { Card, Label, Btn, Tag, Ico, I, Mark, Sheet, page } from '../components/ui'
+import Rearrange from './Rearrange'
+import SessionCard from '../components/SessionCard'
+import Insights from '../components/Insights'
 import { SkeletonToday } from '../components/Skeleton'
 import Empty from '../components/Empty'
 import Photo from '../components/Photo'
 import { P } from '../lib/theme'
 
-export default function Today({ profile, week, programme, half, onOpen, onSetRace, sections }) {
+export default function Today({ profile, week, programme, half, onOpen,
+                                onSetRace, onTakeClubRace, onProgress, onCoaches, onPlan,
+                                prediction, sections }) {
   const [sessions, setSessions] = useState([])
   const [notices, setNotices] = useState([])
   const [programmes, setProgrammes] = useState([])
   const [day, setDay] = useState(new Date().getDay() || 7)
   const [notice, setNotice] = useState(null)
   const [ready, setReady] = useState(false)
+  const [moving, setMoving] = useState(false)
+  const [outline, setOutline] = useState({})
+  const [completions, setCompletions] = useState({})
+  const [coaches, setCoaches] = useState([])
+  const [done, setDone] = useState(0)
 
   useEffect(() => {
     if (!week) { setReady(true); return }
     Promise.all([
-      getSessions(week.id).then(setSessions),
+      getSessions(week.id).then(async list => {
+        setSessions(list)
+        const ids = list.map(x => x.id)
+        const [o, c, d] = await Promise.all([
+          getWeekOutline(ids).catch(() => ({})),
+          getCompletions(ids).catch(() => ({})),
+          profile?.id ? getWeekDone(profile.id, ids).catch(() => 0) : 0,
+        ])
+        setOutline(o); setCompletions(c); setDone(d)
+      }),
       getNotices().then(setNotices),
       getProgrammes().then(setProgrammes),
+      getCoaches().then(setCoaches).catch(() => {}),
     ]).finally(() => setReady(true))
   }, [week])
 
@@ -60,63 +81,49 @@ export default function Today({ profile, week, programme, half, onOpen, onSetRac
             }}>
               <span style={{ fontSize: 12.5, fontWeight: on ? 700 : 600,
                 color: on ? C.ink : C.mute }}>{d}</span>
-              <span style={{ width: 5, height: 5, borderRadius: 999,
-                background: on ? C.ink : s?.is_test ? C.card3 : 'transparent' }} />
+              {/* A mark per day, saying what kind of session it is.
+                  Filled for the hard days, outlined for recovery, nothing
+                  for a day with nothing on it. Runna uses colour here;
+                  without hue, fill carries it. */}
+              <span style={{
+                width: 5, height: 5, borderRadius: 999,
+                background: !s ? 'transparent'
+                  : s.kind === 'rest' ? 'transparent'
+                  : on ? C.ink
+                  : s.kind === 'strength' || s.kind === 'half' ? C.sub
+                  : C.card3,
+                border: s?.kind === 'rest'
+                  ? `1px solid ${on ? C.sub : C.card3}` : 'none',
+              }} />
             </button>
           )
         })}
       </div>
 
+      {/* things you do to the week, rather than in it */}
+      <div className="nb" style={{ display: 'flex', gap: 8, marginTop: 16,
+        overflowX: 'auto', paddingBottom: 2, marginLeft: -16, marginRight: -16,
+        paddingLeft: 16, paddingRight: 16 }}>
+        <Chip icon={I.cal} label="The block" onClick={onPlan} />
+        <Chip icon={I.swap} label="Move my week"
+          onClick={() => setMoving(true)} disabled={sessions.length === 0} />
+        <Chip icon={I.chart} label="Progress" onClick={onProgress} />
+        <Chip icon={I.msg} label="Ask a coach" onClick={onCoaches} />
+      </div>
+
       {/* countdown */}
-      {days === null && (
-        <div style={{ marginTop: 16 }}>
-          <Empty quiet icon={I.cal}
-            title="No race in the diary"
-            body="Set your day at ExCeL and everything else — the countdown, the phases, the taper — lines up behind it."
-            action="Set my race day"
-            onAction={onSetRace} />
-        </div>
-      )}
+      <div style={{ marginTop: 16 }}>
+        <Insights days={days} half={half} programme={programme}
+          prediction={prediction} week={week?.idx} sessions={sessions}
+          done={done} onSetRace={onSetRace} onOpenRace={onPlan}
+          onTakeClubRace={onTakeClubRace}
+          raceDate={profile.race_date
+            ? new Date(profile.race_date).toLocaleDateString('en-GB',
+                { day: 'numeric', month: 'short' })
+            : null} />
+      </div>
 
-      {days !== null && (
-        <Card style={{ marginTop: 16 }}>
-          <Label style={{ color: C.g }}>
-            {profile.race_date ? 'YOUR RACE'
-              : (programme?.race_name || 'YOUR RACE').toUpperCase()}
-          </Label>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginTop: 5 }}>
-            <div style={{ fontSize: 44, fontWeight: 900, letterSpacing: '-.05em',
-              lineHeight: 1, ...T.num }}>{days}</div>
-            <div style={{ fontSize: 15.5, fontWeight: 700, color: C.sub }}>days to go</div>
-          </div>
-          {profile.race_division && (
-            <div style={{ fontSize: 13, color: C.sub, marginTop: 6 }}>
-              {profile.race_division}
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: 4, marginTop: 14 }}>
-            {Array.from({ length: programme?.total_weeks ?? 8 }).map((_, i) => (
-              <div key={i} style={{ flex: 1, height: 5, borderRadius: 999,
-                background: i < (week?.idx ?? 1) ? C.gLine : C.card3 }} />
-            ))}
-          </div>
-          {half?.projected && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 14,
-              padding: '12px 13px', background: C.card2, borderRadius: 12,
-              animation: 'glow 2.2s ease-out 1' }}>
-              <div style={{ flex: 1, fontSize: 13, color: C.sub, lineHeight: 1.4 }}>
-                Projected finish from your half
-              </div>
-              <div style={{ fontSize: 19, fontWeight: 800, color: C.g, ...T.num,
-                animation: 'rise .5s ease-out' }}>
-                {hhmm(half.projected)}
-              </div>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* today's session */}
+      {/* today's session — the whole shape of it, not just a title */}
       {sessions.length === 0 && (
         <div style={{ marginTop: 11 }}>
           <Empty icon={I.cal}
@@ -125,72 +132,27 @@ export default function Today({ profile, week, programme, half, onOpen, onSetRac
         </div>
       )}
 
-      {today && (today.cover_url && today.kind !== 'rest' ? (
-        <div style={{ marginTop: 11 }}>
-          <Photo src={today.cover_url} dim={1.05} radius={18} style={{ minHeight: 258 }}>
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column',
-              padding: 16 }}>
-              <div style={{ display: 'flex', gap: 7 }}>
-                <span style={{ background: 'rgba(0,0,0,.5)', borderRadius: 999,
-                  padding: '6px 12px', fontSize: 12, fontWeight: 700 }}>
-                  Week {week?.idx ?? 1}
-                </span>
-                {today.is_test && (
-                  <span style={{ borderRadius: 999, padding: '6px 12px', fontSize: 12,
-                    fontWeight: 800,
-                    background: today.kind === 'half' ? C.g : 'rgba(0,0,0,.5)',
-                    color: today.kind === 'half' ? '#0B0A09' : P.ink }}>
-                    {today.kind === 'half' ? 'KEY TEST' : 'Test'}
-                  </span>
-                )}
-              </div>
-              <div style={{ flex: 1, minHeight: 88 }} />
-              <div style={{ fontSize: 13, color: P.sub, fontWeight: 600 }}>
-                Salus · {DAYS[today.day - 1]}
-              </div>
-              <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.035em',
-                marginTop: 2 }}>{today.title}</div>
-              <div style={{ fontSize: 14, color: P.sub, marginTop: 3,
-                fontWeight: 600 }}>
-                {today.tag}{today.est_min ? ` · ${today.est_min} min` : ''}
-              </div>
-              <button onClick={() => onOpen(today)} style={{ marginTop: 15,
-                border: 'none', background: P.ink, color: '#0B0A09', borderRadius: 999,
-                padding: '14px 0', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                fontFamily: 'inherit', width: '100%' }}>
-                {today.kind === 'half' ? 'Start the half' : 'View session'}
-              </button>
-            </div>
-          </Photo>
-        </div>
-      ) : (
+      {today && today.kind === 'rest' && (
         <Card style={{ marginTop: 11 }}>
-          {today.is_test && (
-            <div style={{ marginBottom: 10 }}>
-              <Tag tone={today.kind === 'half' ? 'key' : undefined}>
-                {today.kind === 'half' ? 'KEY TEST' : 'TEST'}
-              </Tag>
-            </div>
-          )}
-          <div style={{ fontSize: 13, color: C.sub, fontWeight: 600 }}>
+          <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>
             Salus · {DAYS[today.day - 1]}
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.03em',
-            marginTop: 3 }}>{today.title}</div>
-          <div style={{ ...T.body, fontSize: 14, marginTop: 3 }}>
-            {today.tag}{today.est_min ? ` · ${today.est_min} min` : ''}
-          </div>
-          {today.kind !== 'rest' && (
-            <Btn style={{ marginTop: 15 }} onClick={() => onOpen(today)}>
-              {today.kind === 'half' ? 'Start the half' : 'View session'}
-            </Btn>
-          )}
+          <div style={{ ...T.h1, fontSize: 25, marginTop: 6 }}>{today.title}</div>
           {today.body && (
-            <div style={{ ...T.body, color: C.ink, marginTop: 13,
+            <div style={{ ...T.body, color: C.ink, marginTop: 12,
               whiteSpace: 'pre-line' }}>{today.body}</div>
           )}
         </Card>
-      ))}
+      )}
+
+      {today && today.kind !== 'rest' && (
+        <div style={{ marginTop: 11 }}>
+          <SessionCard session={today} blocks={outline[today.id] || []}
+            coach={coaches.find(c => c.id === today.coach_id)}
+            completions={completions[today.id]}
+            onOpen={() => onOpen(today)} />
+        </div>
+      )}
 
       {/* notices — a board, not a feed */}
       {notices.length > 0 && (
@@ -283,6 +245,15 @@ export default function Today({ profile, week, programme, half, onOpen, onSetRac
             </div>
           ))}
         </>
+      )}
+
+      {moving && week && (
+        <Rearrange weekId={week.id} sessions={sessions}
+          onClose={() => setMoving(false)}
+          onSaved={() => {
+            setMoving(false)
+            getSessions(week.id).then(setSessions)
+          }} />
       )}
 
       {notice && (

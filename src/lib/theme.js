@@ -1,31 +1,46 @@
 // Salus Train — palette and type.
 // Bone is the standard; light is there for daylight use.
 
+// One palette. There was a light theme and a switcher, which was me
+// hedging rather than deciding — an app used in a dark room at six in
+// the morning has one right answer, and offering two just means both
+// are half-considered. The back office keeps its own light palette
+// because that's a different room.
+// Monochrome.
+//
+// Eight values, no hue. The accent isn't a colour — it's simply the
+// brightest step, one above body text. That means state has to be
+// carried by value, weight and fill instead, which is a stricter
+// system than colour and the reason it reads as considered rather
+// than plain.
+//
+// Warmth is in the values themselves rather than in a tint: the
+// ground is a brown-black, the top end is bone. Neither is neutral
+// grey, which would look like a wireframe.
 export const PAL = {
-  bone: {
-    name: 'Bone', note: 'Cream on near-black. The standard.',
-    bg: '#0B0A09', card: '#151412', card2: '#1F1D1A', card3: '#2B2926',
-    line: '#262421', ink: '#EFEAE1', sub: '#948D83', mute: '#635C54',
-    g: '#E8DCC8', gDeep: '#2C2620', gLine: 'rgba(232,220,200,.38)',
-    red: '#CC7A68', sheet: '#171614',
-    gold: '#E8DCC8', silver: '#B5AEA4', bronze: '#9C8570', shadow: 'none',
-    // the logo PNG is exported light; dark theme uses it as-is
-    markFilter: 'none',
-  },
-  light: {
-    name: 'Light', note: 'Bone ground, like the studio.',
-    bg: '#F7F3EC', card: '#FFFFFF', card2: '#F0EAE0', card3: '#E4DBCD',
-    line: '#E5DCCE', ink: '#1A1512', sub: '#6D6156', mute: '#9A8F82',
-    g: '#5A4A33', gDeep: '#EFE7DA', gLine: 'rgba(90,74,51,.3)',
-    red: '#AE5140', sheet: '#FFFFFF',
-    gold: '#8A7350', silver: '#8D8981', bronze: '#96674A',
-    shadow: '0 1px 2px rgba(26,21,18,.07)',
-    // ...and inverted on the light ground, so one file covers both
-    markFilter: 'invert(1)',
-  },
+  bg:    '#0A0A09',   // the ground, warm near-black
+  card:  '#141312',   // surfaces
+  card2: '#1D1C1A',   // inputs, fills
+  card3: '#2A2926',   // chips, pressed
+  line:  '#262523',   // hairlines
+  mute:  '#5E5B56',   // timestamps, inactive
+  sub:   '#8E8A83',   // secondary
+  ink:   '#EDE9E2',   // body
+  g:     '#FFFCF6',   // the accent — brightest, used as a fill
+  gDeep: '#232120',   // its dark counterpart, for logged states
+  gLine: 'rgba(255,252,246,.42)',
+
+  // The single exception. Delete is the only place where getting it
+  // wrong is unrecoverable, and it's worth breaking the system for.
+  red:   '#C4685A',
+
+  sheet: '#161514',
+  gold:  '#FFFCF6', silver: '#B4AFA7', bronze: '#7A756E',
+  shadow: 'none',
+  markFilter: 'none',
 }
 
-export const vars = p => ({
+export const vars = (p = PAL) => ({
   '--bg': p.bg, '--card': p.card, '--card2': p.card2, '--card3': p.card3,
   '--line': p.line, '--ink': p.ink, '--sub': p.sub, '--mute': p.mute,
   '--g': p.g, '--gDeep': p.gDeep, '--gLine': p.gLine, '--red': p.red,

@@ -18,8 +18,8 @@ export default function Video({ src, poster, children, style, dim = 1, radius = 
       overflow: 'hidden',
       borderRadius: radius,
       background: poster
-        ? `#0B0A09 url(${poster}) center/cover`
-        : 'linear-gradient(150deg,#312A22,#191714 60%,#0B0A09)',
+        ? `#0A0A09 url(${poster}) center/cover`
+        : 'linear-gradient(150deg,#2B2926,#1A1918 60%,#0A0A09)',
       ...style,
     }}>
       {src && (

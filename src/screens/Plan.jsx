@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { C, T } from '../lib/theme'
 import { DAYS } from '../lib/format'
 import { getSessions } from '../lib/data'
-import { Card, Label, Tag, page } from '../components/ui'
+import { Card, Label, Tag, Back, page } from '../components/ui'
 import { SkeletonList } from '../components/Skeleton'
 import Empty from '../components/Empty'
 
-export default function Plan({ week, programme, onOpen }) {
+export default function Plan({ week, programme, onOpen, onBack }) {
   const [sessions, setSessions] = useState([])
   const [ready, setReady] = useState(false)
   useEffect(() => {
@@ -18,7 +18,8 @@ export default function Plan({ week, programme, onOpen }) {
 
   return (
     <div style={page}>
-      <h1 style={T.h1}>The plan</h1>
+      {onBack && <Back onClick={onBack} />}
+      <h1 style={{ ...T.h1, marginTop: onBack ? 20 : 0 }}>The plan</h1>
       <p style={{ ...T.body, marginTop: 5 }}>
         {week?.phase} — {week?.note}
       </p>

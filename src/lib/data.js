@@ -55,7 +55,8 @@ export async function getMyProgramme() {
   return fallback
     ? { programme_id: fallback.id, slug: fallback.slug, name: fallback.name,
         total_weeks: fallback.weeks, race_name: fallback.race_name,
-        uses_half: fallback.uses_half }
+        uses_half: fallback.uses_half, race_image: fallback.race_image,
+        race_location: fallback.race_location, race_date: fallback.race_date }
     : null
 }
 
@@ -86,11 +87,60 @@ export async function getPublishedWeeks(programmeId) {
 export const setMyProgramme = (userId, programmeId) =>
   supabase.from('profiles').update({ programme_id: programmeId }).eq('id', userId)
 
+// A member's week, with any moves they've made applied. Falls back to
+// the coach's order if the function isn't there yet.
 export async function getSessions(weekId) {
-  const { data, error } = await supabase
+  const { data, error } = await supabase.rpc('my_week', { p_week: weekId })
+  if (!error) return data || []
+
+  const { data: plain, error: e2 } = await supabase
     .from('sessions').select('*').eq('week_id', weekId).order('day')
+  if (e2) throw e2
+  return (plain || []).map(s => ({ ...s, coach_day: s.day, moved: false }))
+}
+
+export async function rearrangeWeek(weekId, order) {
+  const { error } = await supabase.rpc('rearrange_week', {
+    p_week: weekId,
+    p_session: order.map(o => o.id),
+    p_day: order.map(o => o.day),
+  })
   if (error) throw error
-  return data || []
+}
+
+export async function resetWeek(weekId) {
+  const { error } = await supabase.rpc('reset_week', { p_week: weekId })
+  if (error) throw error
+}
+
+// The blocks of every session in a week, so the Today card can show
+// the shape of the session rather than just its name.
+export async function getWeekOutline(sessionIds) {
+  if (!sessionIds?.length) return {}
+  const { data } = await supabase
+    .from('blocks')
+    .select('id, session_id, ord, letter, label, scheme, block_lines(movement, ord)')
+    .in('session_id', sessionIds).order('ord')
+  const out = {}
+  ;(data || []).forEach(b => {
+    out[b.session_id] = out[b.session_id] || []
+    out[b.session_id].push({
+      ...b,
+      movements: (b.block_lines || [])
+        .sort((a, c) => a.ord - c.ord)
+        .map(l => l.movement).filter(Boolean),
+    })
+  })
+  return out
+}
+
+export async function getCompletions(sessionIds) {
+  if (!sessionIds?.length) return {}
+  const { data } = await supabase.from('session_completions')
+    .select('*').in('session_id', sessionIds)
+  const out = {}
+  ;(data || []).forEach(r => { out[r.session_id] = r })
+  return out
 }
 
 export async function getSessionDetail(sessionId) {
@@ -302,4 +352,110 @@ export async function getMyLeaderboardRow(userId) {
     .rpc('my_leaderboard_row', { p_user: userId })
   if (error) throw error
   return data?.[0] || null
+}
+
+/* ---------------- progress ---------------- */
+export async function getActivity(userId, since = null) {
+  const { data, error } = await supabase.rpc('my_activity', {
+    p_user: userId, p_since: since,
+  })
+  if (error) throw error
+  return data?.[0] || { sessions: 0, minutes: 0, volume: 0, sets: 0 }
+}
+
+export async function getMovements(userId) {
+  const { data, error } = await supabase.rpc('my_movements', { p_user: userId })
+  if (error) throw error
+  return data || []
+}
+
+/* ---------------- community ---------------- */
+export async function getFeed(limit = 25) {
+  const { data } = await supabase.from('community_feed')
+    .select('*').limit(limit)
+  return data || []
+}
+
+export async function getClubWeek() {
+  const { data } = await supabase.rpc('club_week')
+  return data?.[0] || { sessions: 0, people: 0, minutes: 0 }
+}
+
+export async function getSessionCompany(sessionId) {
+  const { data } = await supabase.rpc('session_company', { p_session: sessionId })
+  return data || []
+}
+
+/* ---------------- running ---------------- */
+
+// Target paces as a fraction of their own tested 5km, so "steady"
+// means the same effort to everyone rather than the same number.
+export async function getPaces(userId) {
+  const { data, error } = await supabase.rpc('my_paces', { p_user: userId })
+  if (error) throw error
+  // The function returns the multiplier; the seconds come from their 5km.
+  return data || []
+}
+
+export async function saveRun(userId, run, splits = []) {
+  const { data, error } = await supabase.from('run_logs')
+    .insert({ user_id: userId, ...run }).select().single()
+  if (error) throw error
+  if (splits.length) {
+    const rows = splits.map((s, i) => ({ run_log_id: data.id, idx: i + 1, ...s }))
+    const { error: e2 } = await supabase.from('run_splits').insert(rows)
+    if (e2) throw e2
+  }
+  return data
+}
+
+export async function getRuns(userId, limit = 20) {
+  const { data } = await supabase.from('run_logs')
+    .select('*').eq('user_id', userId)
+    .order('ran_at', { ascending: false }).limit(limit)
+  return data || []
+}
+
+/* ---------------- posts ---------------- */
+export async function getPosts(limit = 30) {
+  const { data } = await supabase.from('post_feed').select('*').limit(limit)
+  return data || []
+}
+
+export async function addPost(userId, post) {
+  const { data, error } = await supabase.from('posts')
+    .insert({ user_id: userId, ...post }).select().single()
+  if (error) throw error
+  return data
+}
+
+export const deletePost = id => supabase.from('posts').delete().eq('id', id)
+
+export async function toggleKudos(postId, userId, on) {
+  if (on) {
+    const { error } = await supabase.from('kudos')
+      .insert({ post_id: postId, user_id: userId })
+    if (error && error.code !== '23505') throw error
+  } else {
+    const { error } = await supabase.from('kudos')
+      .delete().eq('post_id', postId).eq('user_id', userId)
+    if (error) throw error
+  }
+}
+
+/* ---------------- prediction ---------------- */
+// What they're on for, before they've run a half.
+export async function getPrediction(userId) {
+  const { data, error } = await supabase.rpc('predict_finish', { p_user: userId })
+  if (error) throw error
+  return data?.[0] || null
+}
+
+// How many of this week's sessions a member has finished.
+export async function getWeekDone(userId, sessionIds) {
+  if (!sessionIds?.length) return 0
+  const { data } = await supabase.from('workout_logs')
+    .select('session_id').eq('user_id', userId)
+    .not('ended_at', 'is', null).in('session_id', sessionIds)
+  return new Set((data || []).map(r => r.session_id)).size
 }

@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { C, T } from '../lib/theme'
 import { fmt } from '../lib/format'
 import { Card, Label, Btn, page } from '../components/ui'
+import Post from './Post'
 import { EFFORT } from './Effort'
 
-export default function Complete({ session, result, effort, onDone }) {
+export default function Complete({ userId, profile, workout, session, result, effort, onDone }) {
   const { elapsed, sets, blocks } = result
   const E = EFFORT[effort] || EFFORT[0]
 
@@ -22,6 +24,8 @@ export default function Complete({ session, result, effort, onDone }) {
     })
     if (logs.length) exercises.push({ name: item.movements?.name, scheme: b.scheme, logs })
   }))
+
+  const [posting, setPosting] = useState(false)
 
   return (
     <div style={page}>
@@ -98,7 +102,27 @@ export default function Complete({ session, result, effort, onDone }) {
         </>
       )}
 
-      <Btn style={{ marginTop: 18 }} onClick={onDone}>Done</Btn>
+      {/* The share, offered after the fact and easy to ignore. Most
+          people will tap Done, and that's fine — the ones who don't
+          are the reason a small club feed works at all. */}
+      <button onClick={() => setPosting(true)} style={{ width: '100%',
+        marginTop: 18, background: C.card, border: `1px solid ${C.line}`,
+        borderRadius: 999, padding: '16px 0', fontSize: 15.5, fontWeight: 700,
+        color: C.ink, cursor: 'pointer', fontFamily: 'inherit' }}>
+        Say something about it
+      </button>
+
+      <button onClick={onDone} style={{ width: '100%', background: 'transparent',
+        border: 'none', color: C.sub, fontSize: 14.5, fontWeight: 600,
+        cursor: 'pointer', fontFamily: 'inherit', padding: '17px 0 0' }}>
+        Done
+      </button>
+
+      {posting && (
+        <Post userId={userId} profile={profile} workout={workout}
+          onClose={() => setPosting(false)}
+          onPosted={() => { setPosting(false); onDone() }} />
+      )}
     </div>
   )
 }

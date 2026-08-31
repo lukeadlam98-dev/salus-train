@@ -7,6 +7,7 @@ import Photo from '../components/Photo'
 import { P } from '../lib/theme'
 import Keypad from '../components/Keypad'
 import { SkeletonSession } from '../components/Skeleton'
+import { getCoaches } from '../lib/data'
 
 // Loads calculate from the member's benchmarks — never stored as kilos,
 // so a week 8 re-test doesn't rewrite week 2's history.
@@ -19,6 +20,8 @@ function targetKg(movement, benchmarks) {
 
 export default function Session({ session, userId, benchmarks, onBack, onFinished }) {
   const [blocks, setBlocks] = useState(null)
+  const [coach, setCoach] = useState(null)
+  const [playing, setPlaying] = useState(false)
   const [log, setLog] = useState(null)          // workout_logs row
   const [sets, setSets] = useState({})          // "itemId.idx" -> {reps,kg,done}
   const [bi, setBi] = useState(0)
@@ -29,6 +32,11 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
   const started = useRef(0)
 
   useEffect(() => { getSessionDetail(session.id).then(setBlocks) }, [session.id])
+  useEffect(() => {
+    if (!session.coach_id) return
+    getCoaches().then(cs => setCoach(cs.find(c => c.id === session.coach_id)))
+      .catch(() => {})
+  }, [session.coach_id])
 
   useEffect(() => {
     if (!live) return
@@ -130,7 +138,57 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
           <p style={{ ...T.body, marginTop: 5 }}>
             {session.tag}{session.est_min ? ` · ${session.est_min} min` : ''}
           </p>
+          {session.focus && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8,
+              marginTop: 10 }}>
+              <span style={{ background: C.card3, borderRadius: 7,
+                padding: '4px 9px', fontSize: 11.5, fontWeight: 700 }}>Focus</span>
+              <span style={{ fontSize: 14, color: C.sub }}>{session.focus}</span>
+            </div>
+          )}
         </>
+      )}
+
+      {/* the coach, saying what today is for.
+          A written note tells you the standard; hearing it tells you
+          the intent, and it's the closest thing to them being there. */}
+      {session.video_url && (
+        <div style={{ marginTop: 18, borderRadius: 16, overflow: 'hidden',
+          background: '#000', position: 'relative' }}>
+          {playing ? (
+            <video src={session.video_url} controls autoPlay playsInline
+              style={{ width: '100%', display: 'block', maxHeight: 420 }} />
+          ) : (
+            <button onClick={() => setPlaying(true)} style={{ width: '100%',
+              border: 'none', padding: 0, cursor: 'pointer', display: 'block',
+              background: coach?.photo_url
+                ? `#0B0A09 url(${coach.photo_url}) center/cover`
+                : 'linear-gradient(150deg,#312A22,#191714)',
+              minHeight: 190, position: 'relative' }}>
+              <div style={{ position: 'absolute', inset: 0,
+                background: 'linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.75))' }} />
+              <div style={{ position: 'relative', height: '100%', display: 'flex',
+                flexDirection: 'column', justifyContent: 'flex-end',
+                alignItems: 'flex-start', padding: 16, minHeight: 190 }}>
+                <div style={{ width: 46, height: 46, borderRadius: 999,
+                  background: 'rgba(255,255,255,.16)',
+                  backdropFilter: 'blur(14px)', display: 'grid',
+                  placeItems: 'center', marginBottom: 12 }}>
+                  <span style={{ color: '#F6F2EC', fontSize: 15,
+                    marginLeft: 3 }}>▶</span>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.13em',
+                  color: 'rgba(246,242,236,.7)' }}>
+                  {coach ? coach.name.toUpperCase() : 'YOUR COACH'}
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#F6F2EC',
+                  marginTop: 4, letterSpacing: '-.02em' }}>
+                  What today is for
+                </div>
+              </div>
+            </button>
+          )}
+        </div>
       )}
 
       {session.body && (
@@ -318,10 +376,10 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
                         ? writeSet(item, i, { done: false })
                         : logSet(item, i)}
                       style={{ width: 45, height: 45, borderRadius: 999, border: 'none',
-                        cursor: 'pointer', background: on ? C.gDeep : C.card2,
+                        cursor: 'pointer', background: on ? C.g : C.card2,
                         display: 'grid', placeItems: 'center',
                         animation: on ? 'pop .26s cubic-bezier(.2,.8,.3,1)' : 'none' }}>
-                      <Ico d={I.check} s={17} c={on ? C.g : C.mute} w={2.6} />
+                      <Ico d={I.check} s={17} c={on ? C.bg : C.mute} w={2.6} />
                     </button>
                   </div>
                 </div>
@@ -371,15 +429,17 @@ function Cell({ v, ph, on, act, unit, onTap }) {
   return (
     <button onClick={onTap} style={{
       height: 45, borderRadius: 12, cursor: 'pointer', fontFamily: F,
-      background: on ? C.gDeep : C.card2,
-      border: `1.5px solid ${on ? C.gLine : act ? C.ink : 'transparent'}`,
+      // Fill does the work colour used to: done is filled and
+      // inverted, next is outlined, waiting is flat.
+      background: on ? C.g : C.card2,
+      border: `1.5px solid ${on ? C.g : act ? C.ink : 'transparent'}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
       padding: '0 8px',
     }}>
-      <span style={{ fontSize: 16.5, fontWeight: 700, ...T.num,
-        color: on ? C.g : filled ? C.ink : C.mute }}>{filled ? v : (ph || '—')}</span>
-      {unit && <span style={{ fontSize: 11.5, color: on ? C.g : C.mute,
-        fontWeight: 600, opacity: .8 }}>{unit}</span>}
+      <span style={{ fontSize: 16.5, fontWeight: on ? 800 : 700, ...T.num,
+        color: on ? C.bg : filled ? C.ink : C.mute }}>{filled ? v : (ph || '—')}</span>
+      {unit && <span style={{ fontSize: 11.5, color: on ? C.bg : C.mute,
+        fontWeight: 600, opacity: on ? .65 : .8 }}>{unit}</span>}
     </button>
   )
 }

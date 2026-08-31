@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { C, T, PAL } from '../lib/theme'
+import { C, T } from '../lib/theme'
 import { fmt, hhmm, toSecs, daysUntil } from '../lib/format'
 import { saveBenchmark, getMyScore } from '../lib/data'
 import { Card, Label, Btn, Avatar, Ico, I, page } from '../components/ui'
 import Empty from '../components/Empty'
 import { RACE_DAYS, DIVISIONS } from './Onboard'
 import Score from './Score'
+import Paces from './Paces'
 import Keypad from '../components/Keypad'
 
 const BM = [
@@ -18,7 +19,7 @@ const BM = [
 ]
 
 export default function You({ userId, profile, benchmarks, setBenchmarks,
-                              theme, setTheme, half, onUpdate, onCoaches }) {
+                              half, onUpdate, onCoaches }) {
   const [pad, setPad] = useState(null)
   const [editRace, setEditRace] = useState(false)
   const [score, setScore] = useState(null)
@@ -182,31 +183,7 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
         </div>
       )}
 
-      <Label style={{ margin: '26px 0 11px' }}>APPEARANCE</Label>
-      {Object.entries(PAL).map(([k, p]) => {
-        const on = theme === k
-        return (
-          <Card key={k} onClick={() => setTheme(k)}
-            style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 13,
-              border: `1.5px solid ${on ? C.g : 'transparent'}` }}>
-            <div style={{ width: 56, height: 56, borderRadius: 11, flexShrink: 0,
-              background: p.bg, border: `1px solid ${p.line}`, padding: 7,
-              display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-              gap: 5 }}>
-              <div style={{ height: 7, borderRadius: 3, background: p.card2 }} />
-              <div style={{ display: 'flex', gap: 4 }}>
-                <div style={{ flex: 1, height: 6, borderRadius: 999, background: p.ink }} />
-                <div style={{ width: 15, height: 6, borderRadius: 999, background: p.g }} />
-              </div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15.5, fontWeight: 700 }}>{p.name}</div>
-              <div style={{ ...T.body, fontSize: 12.5, marginTop: 3 }}>{p.note}</div>
-            </div>
-            {on && <Ico d={I.check} s={16} c={C.g} w={2.6} />}
-          </Card>
-        )
-      })}
+      <Paces fivekSeconds={benchmarks?.fivek?.value_s} />
 
       <Label style={{ margin: '26px 0 11px' }}>COACHES</Label>
       <Card onClick={onCoaches}>
@@ -223,7 +200,9 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
 
       {profile?.role === 'admin' && (
         <>
-          <Label style={{ margin: '26px 0 11px' }}>COACHES</Label>
+          <Paces fivekSeconds={benchmarks?.fivek?.value_s} />
+
+      <Label style={{ margin: '26px 0 11px' }}>COACHES</Label>
           <Card onClick={() => { window.location.search = '?admin' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ flex: 1 }}>

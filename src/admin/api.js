@@ -432,3 +432,14 @@ export async function getAllMembers() {
     .select('id, name, programme_id, role, created_at')
   return data || []
 }
+
+/* ---------------- coaches ---------------- */
+export async function getCoaches() {
+  const { data, error } = await supabase.from('coaches').select('*').order('sort')
+  if (error) throw error
+  return data || []
+}
+export async function setCoach(id, patch) {
+  const { error } = await supabase.from('coaches').update(patch).eq('id', id)
+  if (error) throw error
+}

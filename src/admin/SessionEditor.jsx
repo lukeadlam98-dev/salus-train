@@ -15,10 +15,14 @@ export default function SessionEditor({ session, week, onBack }) {
   const [s, setS] = useState(session)
   const [blocks, setBlocks] = useState([])
   const [movements, setMovements] = useState([])
+  const [coaches, setCoaches] = useState([])
 
   const load = () => api.getBlocks(session.id).then(setBlocks)
-  useEffect(() => { setS(session); load(); api.listMovements().then(setMovements) },
-    [session.id])
+  useEffect(() => {
+    setS(session); load()
+    api.listMovements().then(setMovements)
+    api.getCoaches().then(setCoaches).catch(() => {})
+  }, [session.id])
 
   // Optimistic: show it straight away, then write. If the write fails
   // the next load corrects it — better than a field that appears to do
@@ -69,11 +73,74 @@ export default function SessionEditor({ session, week, onBack }) {
                     onSave={v => patch({ est_min: v === '' ? null : Number(v) })} />
                 </Field>
               </div>
+              <Field label="Focus"
+                hint="The one movement today is really about. Shows as a chip on their card.">
+                <Save value={s.focus} placeholder="Back squat"
+                  onSave={v => patch({ focus: v })} />
+              </Field>
               <Toggle on={s.is_test} label="This is a test"
                 onChange={v => patch({ is_test: v })} />
             </div>
           </div>
         </Card>
+
+        {/* ---- running sessions need distances, not blocks ---- */}
+        {s.kind === 'run' && (
+          <Card style={{ marginTop: 14 }}>
+            <div style={{ ...T.h3, fontSize: 15.5, marginBottom: 4 }}>
+              The running
+            </div>
+            <div style={{ fontSize: 11.5, color: C.mute, marginBottom: 14,
+              lineHeight: 1.45 }}>
+              Set reps above 1 and the member gets a lap button with stations
+              between the runs — which is the thing nobody trains until it's
+              too late.
+            </div>
+            <div style={{ display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <Field label="Distance each" hint="In metres.">
+                <Save value={s.run_distance_m ?? ''} placeholder="400"
+                  onSave={v => patch({ run_distance_m: v === '' ? null : Number(v) })} />
+              </Field>
+              <Field label="How many" hint="1 for a straight run.">
+                <Save value={s.run_reps ?? ''} placeholder="8"
+                  onSave={v => patch({ run_reps: v === '' ? null : Number(v) })} />
+              </Field>
+              <Field label="Target pace"
+                hint="1.00 = their 5km pace. 1.14 = steady.">
+                <Save value={s.run_pace_pct ?? ''} placeholder="1.06"
+                  onSave={v => patch({ run_pace_pct: v === '' ? null : Number(v) })} />
+              </Field>
+            </div>
+          </Card>
+        )}
+
+        {/* ---- the coach explaining it ---- */}
+        {!isRest && (
+          <Card style={{ marginTop: 14 }}>
+            <div style={{ ...T.h3, fontSize: 15.5, marginBottom: 4 }}>
+              A coach explaining it
+            </div>
+            <div style={{ fontSize: 11.5, color: C.mute, marginBottom: 14,
+              lineHeight: 1.45 }}>
+              Optional, and the single highest-value thing you can add to a
+              session. Thirty seconds of someone saying what today is for beats
+              any amount of written note.
+            </div>
+            <div style={{ display: 'grid',
+              gridTemplateColumns: '1fr minmax(0,1.4fr)', gap: 14 }}>
+              <Field label="Whose voice">
+                <Pick value={s.coach_id || ''}
+                  options={[['', 'Nobody'], ...coaches.map(c => [c.id, c.name])]}
+                  onChange={v => patch({ coach_id: v || null })} />
+              </Field>
+              <Field label="The video">
+                <ImagePicker kind="video" value={s.video_url}
+                  onChange={v => patch({ video_url: v })} />
+              </Field>
+            </div>
+          </Card>
+        )}
 
         {/* ---- rest days take copy instead of blocks ---- */}
         {isRest ? (

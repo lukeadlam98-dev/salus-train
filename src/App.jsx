@@ -3,7 +3,7 @@ import { supabase } from './lib/supabase'
 import { PAL, vars, C, F, T } from './lib/theme'
 import {
   getProfile, updateProfile, getBenchmarks, getWeek,
-  getHalf, getMultiplier, getMyProgramme, getConfig,
+  getHalf, getMultiplier, getMyProgramme, getConfig, getPrediction,
 } from './lib/data'
 import { summarise, DEFAULT_MULTIPLIER } from './lib/half'
 
@@ -12,8 +12,11 @@ import SetPassword from './screens/SetPassword'
 import Onboard  from './screens/Onboard'
 import Today    from './screens/Today'
 import Plan     from './screens/Plan'
+import Community from './screens/Community'
 import Board    from './screens/Board'
 import Coaches  from './screens/Coaches'
+import Progress from './screens/Progress'
+import Run      from './screens/Run'
 import You      from './screens/You'
 import Session  from './screens/Session'
 import Half     from './screens/Half'
@@ -34,11 +37,14 @@ export default function App() {
   const [splits, setSplits] = useState({})
   const [multiplier, setMultiplier] = useState(DEFAULT_MULTIPLIER)
   const [cfg, setCfg] = useState({})
+  const [prediction, setPrediction] = useState(null)
   const [recovery, setRecovery] = useState(false)
   const [linkErr, setLinkErr] = useState(null)
 
   const [tab, setTab] = useState('today')
+  const [plan, setPlan] = useState(false)
   const [coaches, setCoaches] = useState(false)
+  const [progress, setProgress] = useState(false)
   const [screen, setScreen] = useState(null)   // null | session | half | effort | done
   const [active, setActive] = useState(null)   // the session being worked
   const [result, setResult] = useState(null)
@@ -96,6 +102,7 @@ export default function App() {
         ])
         if (cancelled) return
         setProfile(p); setBenchmarks(b); setMultiplier(m); setProgramme(prog)
+        getPrediction(uid).then(setPrediction).catch(() => {})
         const w = await getWeek(1, prog?.programme_id)
         if (!cancelled) setWeek(w)
         const h = await getHalf(uid)
@@ -106,7 +113,7 @@ export default function App() {
     return () => { cancelled = true }
   }, [session])
 
-  const theme = profile?.theme && PAL[profile.theme] ? profile.theme : 'bone'
+
   const half = summarise(splits, multiplier)
 
   async function patch(p) {
@@ -116,7 +123,7 @@ export default function App() {
 
   const Shell = ({ children }) => (
     <div style={{
-      ...vars(PAL[theme]), minHeight: '100dvh', background: C.bg, color: C.ink,
+      ...vars(), minHeight: '100dvh', background: C.bg, color: C.ink,
       fontFamily: F,
     }}>{children}</div>
   )
@@ -135,7 +142,7 @@ export default function App() {
   // Deliberately outside Shell: the member layout is phone-width, and
   // writing a training block wants the whole screen.
   if (admin) return (
-    <div style={{ ...vars(PAL[theme]), minHeight: '100dvh', background: C.bg,
+    <div style={{ ...vars(), minHeight: '100dvh', background: C.bg,
       color: C.ink, fontFamily: F }}>
       <Admin profile={profile} onExit={() => {
         setAdmin(false)
@@ -173,10 +180,27 @@ export default function App() {
 
   if (screen === 'done') return (
     <Shell>
-      <Complete session={active} result={result} effort={effort}
+      <Complete userId={session.user.id} profile={profile}
+        workout={result?.log || null}
+        session={active} result={result} effort={effort}
         onDone={() => {
           setScreen(null); setActive(null); setResult(null); setEffort(0)
         }} />
+    </Shell>
+  )
+
+  /* ---------- the whole block, reached from Today ---------- */
+  if (plan) return (
+    <Shell>
+      <Plan week={week} programme={programme} onBack={() => setPlan(false)}
+        onOpen={s => { setPlan(false); open(s) }} />
+    </Shell>
+  )
+
+  /* ---------- progress ---------- */
+  if (progress) return (
+    <Shell>
+      <Progress userId={session.user.id} onBack={() => setProgress(false)} />
     </Shell>
   )
 
@@ -188,24 +212,43 @@ export default function App() {
     </Shell>
   )
 
+  /* ---------- a run ---------- */
+  if (screen === 'run' && active) return (
+    <Shell>
+      <Run userId={session.user.id} session={active}
+        onBack={() => setScreen(null)}
+        onDone={() => { setScreen(null); setActive(null) }} />
+    </Shell>
+  )
+
   /* ---------- tabs ---------- */
   const open = s => {
     setActive(s)
-    setScreen(s.kind === 'half' ? 'half' : 'session')
+    // Running sessions get the clock rather than the set logger — a
+    // member on the road needs a lap button, not a list of kilos.
+    setScreen(s.kind === 'half' ? 'half' : s.kind === 'run' ? 'run' : 'session')
   }
 
   return (
     <Shell>
       {tab === 'today'   && <Today profile={profile} week={week}
                               programme={programme} half={half} onOpen={open}
-                              onSetRace={() => setTab('you')} />}
-      {tab === 'plan'    && <Plan week={week} programme={programme} onOpen={open} />}
-      {tab === 'board'   && <Board profile={profile} userId={session.user.id}
+                              onSetRace={() => setTab('me')}
+                              onTakeClubRace={() => programme?.race_date &&
+                                patch({ race_date: programme.race_date })}
+                              onProgress={() => setProgress(true)}
+                              onCoaches={() => setCoaches(true)}
+                              onPlan={() => setPlan(true)}
+                              prediction={prediction} />}
+
+      {tab === 'community' && <Community profile={profile} userId={session.user.id}
+                              onCoach={() => setCoaches(true)}
+                              onShare={() => patch({ share_on_leaderboard: true })} />}
+      {tab === 'leaderboard' && <Board profile={profile} userId={session.user.id}
                               onShare={() => patch({ share_on_leaderboard: true })} />}
 
-      {tab === 'you'     && <You userId={session.user.id} profile={profile}
+      {tab === 'me'      && <You userId={session.user.id} profile={profile}
                               benchmarks={benchmarks} setBenchmarks={setBenchmarks}
-                              theme={theme} setTheme={t => patch({ theme: t })}
                               half={half} onUpdate={patch}
                               onCoaches={() => setCoaches(true)} />}
       <Tabs tab={tab} setTab={setTab} />

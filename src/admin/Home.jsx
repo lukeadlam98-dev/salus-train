@@ -145,6 +145,24 @@ export default function Home() {
                         placeholder="One line about it"
                         onSave={v => api.setProgramme(p.id, { blurb: v })} />
                     </div>
+                    <div style={{ display: 'grid',
+                      gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 8,
+                      marginTop: 7 }}>
+                      <Save value={p.race_name} placeholder="Race — HYROX London"
+                        onSave={v => api.setProgramme(p.id, { race_name: v })} />
+                      <Save value={p.race_location} placeholder="Where — ExCeL, London"
+                        onSave={v => api.setProgramme(p.id, { race_location: v })} />
+                    </div>
+                    <div style={{ marginTop: 9 }}>
+                      <Field label="Race photo"
+                        hint="Sits behind the countdown. The venue, or a start line — something they're counting down to.">
+                        <ImagePicker value={p.race_image}
+                          onChange={v => run(async () => {
+                            await api.setProgramme(p.id, { race_image: v })
+                            await loadP()
+                          })} />
+                      </Field>
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14,
                       marginTop: 10 }}>
                       <Toggle on={p.live}

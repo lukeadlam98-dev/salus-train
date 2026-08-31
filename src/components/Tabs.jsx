@@ -8,11 +8,17 @@ import { Ico, I, Mark } from './ui'
 // when you have a question. It lives on You, and next to the coach's
 // notes inside a session, which is where the question actually occurs
 // to someone.
+// Today, Community, Leaderboard, Me.
+//
+// Plan came out: it was Today scrolled sideways, and the week is
+// reachable from Today's chip row where it belongs. Community went
+// in because that's the thing a club app has that a training app
+// doesn't — the room, when you're training alone at six.
 const ITEMS = [
-  ['today', 'Today', null],
-  ['plan',  'Plan',  I.cal],
-  ['board', 'Board', I.chart],
-  ['you',   'You',   I.user],
+  ['today',       'Today',       null],
+  ['community',   'Community',   I.users],
+  ['leaderboard', 'Leaderboard', I.chart],
+  ['me',          'Me',          I.user],
 ]
 
 export default function Tabs({ tab, setTab }) {

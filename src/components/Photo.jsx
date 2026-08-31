@@ -10,8 +10,12 @@ export default function Photo({ src, children, style, dim = 1, radius = 0 }) {
       overflow: 'hidden',
       borderRadius: radius,
       background: src
-        ? `#0B0A09 url(${src}) center/cover`
-        : 'linear-gradient(150deg,#312A22,#191714 60%,#0B0A09)',
+        ? `#0A0A09 url(${src}) center/cover`
+        : 'linear-gradient(150deg,#2B2926,#1A1918 60%,#0A0A09)',
+      // The interface is monochrome; the photography isn't. Greyscaling
+      // it was following the system past the point where it helped —
+      // the photographs are the warmth in this, and without them it's
+      // just another well-made dark app.
       ...style,
     }}>
       <div style={{
