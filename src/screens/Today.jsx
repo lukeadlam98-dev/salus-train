@@ -49,7 +49,11 @@ export default function Today({ profile, week, programme, half, onOpen,
   const streak = done
 
   const days = daysUntil(profile?.race_date)
-  const today = sessions.find(s => s.day === day)
+  // A day can hold a morning and an evening session. Ordered by slot,
+  // so the hard one always comes first.
+  const todays = sessions
+    .filter(s => s.day === day)
+    .sort((a, b) => (a.slot || 1) - (b.slot || 1))
   const first = profile?.name ? profile.name.split(' ')[0] : ''
 
   return (
@@ -79,7 +83,7 @@ export default function Today({ profile, week, programme, half, onOpen,
         marginTop: 22 }}>
         {DAYS.map((d, i) => {
           const on = day === i + 1
-          const sess = sessions.find(x => x.day === i + 1)
+          const sess = sessions.find(x => x.day === i + 1 && (x.slot || 1) === 1)
           const date = new Date()
           date.setDate(date.getDate() - ((date.getDay() || 7) - 1) + i)
           return (
@@ -138,25 +142,29 @@ export default function Today({ profile, week, programme, half, onOpen,
         </div>
       )}
 
-      {today && today.kind === 'rest' && (
+      {todays.length === 1 && todays[0].kind === 'rest' && (
         <Card style={{ marginTop: 14 }}>
-          <Label>{DAYS[today.day - 1].toUpperCase()} · RECOVERY</Label>
-          <div style={{ ...T.h1, marginTop: 8 }}>{today.title}</div>
-          {today.body && (
+          <Label>{DAYS[todays[0].day - 1].toUpperCase()} · RECOVERY</Label>
+          <div style={{ ...T.h1, marginTop: 8 }}>{todays[0].title}</div>
+          {todays[0].body && (
             <div style={{ ...T.body, color: C.ink, marginTop: 13,
-              whiteSpace: 'pre-line' }}>{today.body}</div>
+              whiteSpace: 'pre-line' }}>{todays[0].body}</div>
           )}
         </Card>
       )}
 
-      {today && today.kind !== 'rest' && (
-        <div style={{ marginTop: 14 }}>
-          <SessionCard session={today} blocks={outline[today.id] || []}
-            coach={coaches.find(c => c.id === today.coach_id)}
-            completions={completions[today.id]}
-            onOpen={() => onOpen(today)} />
+      {/* A day can have two sessions — a hard one in the morning and
+          something easy in the evening. They're separate cards on
+          purpose: the second only works if it stays easy, and burying
+          it inside the first hides whether it did. */}
+      {todays.filter(t => t.kind !== 'rest').map((t, i) => (
+        <div key={t.id} style={{ marginTop: i ? 11 : 14 }}>
+          <SessionCard session={t} blocks={outline[t.id] || []}
+            coach={coaches.find(c => c.id === t.coach_id)}
+            completions={completions[t.id]}
+            onOpen={() => onOpen(t)} />
         </div>
-      )}
+      ))}
 
       {moving && week && (
         <Rearrange weekId={week.id} sessions={sessions}

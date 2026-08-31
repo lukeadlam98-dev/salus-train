@@ -45,7 +45,8 @@ export const deleteWeek = id =>
 /* ---------------- sessions ---------------- */
 export async function listSessions(weekId) {
   const { data, error } = await supabase
-    .from('sessions').select('*').eq('week_id', weekId).order('day')
+    .from('sessions').select('*').eq('week_id', weekId)
+    .order('day').order('slot')
   if (error) throw error
   return data || []
 }
@@ -57,9 +58,19 @@ export async function setSession(id, patch) {
 export const deleteSession = id =>
   supabase.from('sessions').delete().eq('id', id)
 
+// Finds the next free slot in the day, so adding a second session to a
+// Monday makes it a double rather than failing on the unique key.
 export async function addSession(weekId, day) {
+  const { data: existing } = await supabase.from('sessions')
+    .select('slot').eq('week_id', weekId).eq('day', day)
+  const taken = new Set((existing || []).map(r => r.slot || 1))
+  const slot = taken.has(1) ? (taken.has(2) ? 3 : 2) : 1
+  return addSessionAt(weekId, day, slot)
+}
+
+export async function addSessionAt(weekId, day, slot = 1) {
   const { data, error } = await supabase.from('sessions').insert({
-    week_id: weekId, day, title: 'New session', kind: 'strength',
+    week_id: weekId, day, slot, title: 'New session', kind: 'strength',
   }).select().single()
   if (error) throw error
   return data

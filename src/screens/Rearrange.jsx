@@ -10,6 +10,9 @@ import { Btn, Ico, I } from '../components/ui'
 // Right now they skip it and it's gone. This moves the session, not
 // the programme — an override on their account, so what the coach
 // wrote stays intact and Reset puts it back.
+// A double moves as a day, not as two sessions. Splitting a hard
+// morning and an easy evening across two days is not a rearrangement,
+// it's a different programme.
 export default function Rearrange({ weekId, sessions, onClose, onSaved }) {
   const [order, setOrder] = useState(() =>
     Array.from({ length: 7 }, (_, i) =>

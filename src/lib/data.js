@@ -94,7 +94,7 @@ export async function getSessions(weekId) {
   if (!error) return data || []
 
   const { data: plain, error: e2 } = await supabase
-    .from('sessions').select('*').eq('week_id', weekId).order('day')
+    .from('sessions').select('*').eq('week_id', weekId).order('day').order('slot')
   if (e2) throw e2
   return (plain || []).map(s => ({ ...s, coach_day: s.day, moved: false }))
 }

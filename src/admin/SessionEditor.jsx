@@ -83,6 +83,12 @@ export default function SessionEditor({ session, week, onBack }) {
                   <Pick value={s.kind} options={KINDS}
                     onChange={v => patch({ kind: v })} />
                 </Field>
+                <Field label="When"
+                  hint="Two sessions in a day makes it a double.">
+                  <Pick value={String(s.slot || 1)}
+                    options={[['1','Morning'], ['2','Evening']]}
+                    onChange={v => patch({ slot: Number(v) })} />
+                </Field>
                 <Field label="Minutes">
                   <Save value={s.est_min ?? ''} placeholder="50"
                     onSave={v => patch({ est_min: v === '' ? null : Number(v) })} />

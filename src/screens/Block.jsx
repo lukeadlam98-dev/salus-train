@@ -157,9 +157,13 @@ export default function Block({ profile, programme, onBack, onOpen }) {
                         onClick={e => { e.stopPropagation(); onOpen?.(r) }}
                         style={{ display: 'flex', alignItems: 'center', gap: 11,
                           padding: '11px 0', cursor: 'pointer' }}>
-                        <div style={{ width: 30, fontSize: 11.5,
+                        <div style={{ width: 34, fontSize: 11.5,
                           fontWeight: 700, color: C.mute }}>
                           {DAYS[r.day - 1]}
+                          {r.slot === 2 && (
+                            <span style={{ fontSize: 9, marginLeft: 3,
+                              opacity: .7 }}>pm</span>
+                          )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 14.5, fontWeight: 600,
