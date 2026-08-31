@@ -73,15 +73,19 @@ export const F = "'Inter', -apple-system, system-ui, sans-serif"
 //  Anything that isn't in here should be a good enough reason to
 //  add it here.
 // ---------------------------------------------------------------
+// Bumped up a step. The previous scale read as a well-made web app;
+// the apps this sits alongside are all a size or two larger, and on a
+// phone at arm's length in a gym that difference is legibility rather
+// than taste.
 export const SIZE = {
-  display: 44,   // the countdown, a projected finish
-  xl:      31,   // a screen someone lands on
-  h1:      25,   // screen titles
-  h2:      20,   // section titles
-  h3:      17,   // card titles
-  body:    15,   // reading
-  small:   13,   // secondary, captions
-  micro:   11,   // labels, timestamps
+  display: 62,   // the countdown
+  xl:      34,   // a screen someone lands on
+  h1:      28,   // screen titles
+  h2:      22,   // section titles
+  h3:      19,   // card titles
+  body:    16,   // reading
+  small:   14,   // secondary, captions
+  micro:   12,   // labels, timestamps
 }
 
 export const T = {

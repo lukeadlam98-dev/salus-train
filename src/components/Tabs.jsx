@@ -32,7 +32,7 @@ export default function Tabs({ tab, setTab }) {
       bottom: 'calc(13px + env(safe-area-inset-bottom))',
       maxWidth: 492, margin: '0 auto',
       background: C.sheet, border: `1px solid ${C.line}`, borderRadius: 999,
-      padding: 5, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
+      padding: 6, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
       zIndex: 60, boxShadow: C.shadow,
     }}>
       {ITEMS.map(([k, label, d]) => {

@@ -6,6 +6,7 @@ import { getSessions, getWeekOutline, getCompletions, getCoaches,
 import { Card, Label, Ico, I, page } from '../components/ui'
 import Rearrange from './Rearrange'
 import SessionCard from '../components/SessionCard'
+import Insights from '../components/Insights'
 import { SkeletonToday } from '../components/Skeleton'
 import Empty from '../components/Empty'
 
@@ -54,49 +55,45 @@ export default function Today({ profile, week, programme, half, onOpen,
   return (
     <div style={page} className="stagger">
 
-      {/* ---- who, where, and how long ---- */}
-      <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+      {/* ---- header ---- */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
         <div style={{ flex: 1 }}>
-          <h1 style={{ ...T.h1, fontSize: 24 }}>
+          <h1 style={{ ...T.h1 }}>
             {greeting}, {profile.name?.split(' ')[0]}
           </h1>
-          <div style={{ fontSize: 13, color: C.sub, marginTop: 3,
-            fontWeight: 600 }}>
-            Week {week?.idx ?? 1} of {programme?.total_weeks ?? 8}
-            {days !== null && (
-              <> · <span style={{ color: C.ink }}>{days} days</span> to{' '}
-                {programme?.race_name || 'race day'}</>
-            )}
-          </div>
         </div>
         {streak > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6,
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7,
             background: C.card, border: `1px solid ${C.line}`, borderRadius: 999,
-            padding: '7px 12px', flexShrink: 0 }}>
-            <Ico d={I.bolt} s={13} c={C.g} w={2} />
-            <span style={{ fontSize: 13.5, fontWeight: 800, ...T.num }}>
+            padding: '9px 14px', flexShrink: 0 }}>
+            <Ico d={I.bolt} s={15} c={C.g} w={2} />
+            <span style={{ fontSize: 15.5, fontWeight: 800, ...T.num }}>
               {streak}
             </span>
           </div>
         )}
       </div>
 
-      {/* ---- the week ---- */}
+      {/* ---- the week, with dates ---- */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)',
-        marginTop: 20 }}>
+        marginTop: 22 }}>
         {DAYS.map((d, i) => {
           const on = day === i + 1
           const sess = sessions.find(x => x.day === i + 1)
+          const date = new Date()
+          date.setDate(date.getDate() - ((date.getDay() || 7) - 1) + i)
           return (
             <button key={d} onClick={() => setDay(i + 1)} style={{
               border: 'none', background: 'transparent', cursor: 'pointer',
-              display: 'grid', justifyItems: 'center', gap: 5, padding: '5px 0',
+              display: 'grid', justifyItems: 'center', gap: 6, padding: '4px 0',
               fontFamily: 'inherit',
             }}>
-              <span style={{ fontSize: 12.5, fontWeight: on ? 700 : 600,
+              <span style={{ fontSize: 14, fontWeight: on ? 700 : 500,
                 color: on ? C.ink : C.mute }}>{d}</span>
+              <span style={{ fontSize: 17, fontWeight: on ? 800 : 600,
+                color: on ? C.ink : C.mute, ...T.num }}>{date.getDate()}</span>
               <span style={{
-                width: 5, height: 5, borderRadius: 999,
+                width: 5, height: 5, borderRadius: 999, marginTop: 1,
                 background: !sess || sess.kind === 'rest' ? 'transparent'
                   : on ? C.ink
                   : sess.kind === 'strength' || sess.kind === 'half' ? C.sub
@@ -109,9 +106,32 @@ export default function Today({ profile, week, programme, half, onOpen,
         })}
       </div>
 
-      {/* ---- the session. The reason the app exists. ---- */}
+      {/* ---- what you can do to the week ---- */}
+      <div className="nb" style={{ display: 'flex', gap: 9, marginTop: 20,
+        overflowX: 'auto', paddingBottom: 3,
+        marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16 }}>
+        <Chip icon={I.cal}   label="The block"    onClick={onPlan} />
+        <Chip icon={I.swap}  label="Move my week"
+          onClick={() => setMoving(true)} disabled={sessions.length === 0} />
+        <Chip icon={I.chart} label="Progress"     onClick={onProgress} />
+        <Chip icon={I.msg}   label="Ask a coach"  onClick={onCoaches} />
+      </div>
+
+      {/* ---- the race ---- */}
+      <div style={{ marginTop: 18 }}>
+        <Insights days={days} half={half} programme={programme}
+          prediction={prediction} week={week?.idx} sessions={sessions}
+          done={done} onSetRace={onSetRace} onOpenRace={onPlan}
+          onTakeClubRace={onTakeClubRace}
+          raceDate={profile.race_date
+            ? new Date(profile.race_date).toLocaleDateString('en-GB',
+                { day: 'numeric', month: 'short', year: 'numeric' })
+            : null} />
+      </div>
+
+      {/* ---- the session ---- */}
       {sessions.length === 0 && (
-        <div style={{ marginTop: 18 }}>
+        <div style={{ marginTop: 14 }}>
           <Empty icon={I.cal}
             title="Your week isn't written yet"
             body="The coaches are still putting this block together. It'll be here before Monday." />
@@ -119,47 +139,24 @@ export default function Today({ profile, week, programme, half, onOpen,
       )}
 
       {today && today.kind === 'rest' && (
-        <Card style={{ marginTop: 18 }}>
+        <Card style={{ marginTop: 14 }}>
           <Label>{DAYS[today.day - 1].toUpperCase()} · RECOVERY</Label>
-          <div style={{ ...T.h1, fontSize: 25, marginTop: 7 }}>{today.title}</div>
+          <div style={{ ...T.h1, marginTop: 8 }}>{today.title}</div>
           {today.body && (
-            <div style={{ ...T.body, color: C.ink, marginTop: 12,
+            <div style={{ ...T.body, color: C.ink, marginTop: 13,
               whiteSpace: 'pre-line' }}>{today.body}</div>
           )}
         </Card>
       )}
 
       {today && today.kind !== 'rest' && (
-        <div style={{ marginTop: 18 }}>
+        <div style={{ marginTop: 14 }}>
           <SessionCard session={today} blocks={outline[today.id] || []}
             coach={coaches.find(c => c.id === today.coach_id)}
             completions={completions[today.id]}
             onOpen={() => onOpen(today)} />
         </div>
       )}
-
-      {/* ---- everything else, as quiet links ----
-          These were four chips taking a full row above the session, which
-          put the reason you opened the app below the fold. They are things
-          you do occasionally; they belong at the bottom, as text. */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
-        gap: 4, marginTop: 26 }}>
-        {[['The block', onPlan],
-          ['Move my week', sessions.length ? () => setMoving(true) : null],
-          ['Progress', onProgress],
-          ['Ask a coach', onCoaches]].map(([label, fn], i, all) => (
-          <span key={label} style={{ display: 'flex', alignItems: 'center' }}>
-            <button onClick={fn || undefined} disabled={!fn}
-              style={{ background: 'transparent', border: 'none',
-                color: fn ? C.sub : C.mute, fontSize: 12.5, fontWeight: 600,
-                cursor: fn ? 'pointer' : 'default', fontFamily: 'inherit',
-                padding: '6px 8px' }}>{label}</button>
-            {i < all.length - 1 && (
-              <span style={{ color: C.line, fontSize: 11 }}>·</span>
-            )}
-          </span>
-        ))}
-      </div>
 
       {moving && week && (
         <Rearrange weekId={week.id} sessions={sessions}
@@ -176,13 +173,13 @@ export default function Today({ profile, week, programme, half, onOpen,
 
 const Chip = ({ icon, label, onClick, disabled }) => (
   <button onClick={disabled ? undefined : onClick} disabled={disabled}
-    style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 7,
+    style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 9,
       background: C.card, border: `1px solid ${C.line}`, borderRadius: 999,
-      padding: '10px 14px', fontSize: 13, fontWeight: 600,
+      padding: '13px 19px', fontSize: 15, fontWeight: 600,
       color: disabled ? C.mute : C.ink, opacity: disabled ? .5 : 1,
       cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit',
       whiteSpace: 'nowrap' }}>
-    <Ico d={icon} s={15} c={disabled ? C.mute : C.sub} w={1.9} />
+    <Ico d={icon} s={17} c={disabled ? C.mute : C.sub} w={1.9} />
     {label}
   </button>
 )
