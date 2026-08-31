@@ -22,7 +22,8 @@ const BM = [
 // who you are and what you're on for, your numbers, where to go from
 // here, and the settings nobody opens twice.
 export default function You({ userId, profile, benchmarks, setBenchmarks,
-                              half, onUpdate, onCoaches, onRaces, onProgress }) {
+                              half, onUpdate, onCoaches, onRaces, onProgress,
+                              onHalf }) {
   const [pad, setPad] = useState(null)
   const [score, setScore] = useState(null)
   const [tab, setTab] = useState('numbers')
@@ -33,11 +34,19 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
   const squat = benchmarks.squat?.value_num
   const bw = benchmarks.bw?.value_num
   const si = squat && bw ? squat / bw : null
-  const done = BM.filter(b => benchmarks[b.key]).length
+  // A row that exists with a null value is not a test that's been
+  // done. Counting it as done is what hid the bug above for a week.
+  const has = b => {
+    const v = benchmarks[b.key]
+    return !!v && (b.time ? v.value_s != null : v.value_num != null)
+  }
+  const done = BM.filter(has).length
 
   async function save(b, v) {
+    // saveBenchmark takes { num, secs } — passing { value_num } wrote
+    // a null and the row came back blank while still counting as done.
     const row = await saveBenchmark(userId, b.key,
-      b.time ? { value_s: v } : { value_num: v })
+      b.time ? { secs: v } : { num: v })
     if (row) setBenchmarks({ ...benchmarks, [b.key]: row })
   }
 
@@ -99,7 +108,7 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
       {/* ---- numbers or paces ---- */}
       <div style={{ display: 'flex', background: C.card2, borderRadius: 999,
         padding: 4, marginTop: 22 }}>
-        {[['numbers', `Benchmarks ${done}/5`], ['paces', 'Paces'],
+        {[['numbers', `Tests ${done + (half?.total ? 1 : 0)}/6`], ['paces', 'Paces'],
           ['score', 'Score']].map(([k, l]) => {
           const on = tab === k
           return (
@@ -118,20 +127,20 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
           <Card style={{ padding: '3px 15px', marginTop: 14 }}>
             {BM.map((b, i) => {
               const v = benchmarks[b.key]
-              const has = !!v
+              const filled = has(b)
               return (
                 <div key={b.key} onClick={() => setPad({ b,
-                    value: has ? (b.time ? v.value_s : v.value_num) : null })}
+                    value: filled ? (b.time ? v.value_s : v.value_num) : null })}
                   style={{ display: 'flex', alignItems: 'center', gap: 12,
                     padding: '15px 0', cursor: 'pointer',
                     borderTop: i ? `1px solid ${C.line}` : 'none' }}>
                   <div style={{ flex: 1, fontSize: 15.5,
-                    fontWeight: has ? 600 : 500,
-                    color: has ? C.ink : C.sub }}>{b.name}</div>
+                    fontWeight: filled ? 600 : 500,
+                    color: filled ? C.ink : C.sub }}>{b.name}</div>
                   <div style={{ fontSize: 17, fontWeight: 800, ...T.num,
-                    color: has ? C.ink : C.mute }}>
-                    {has ? (b.time ? fmt(v.value_s) : v.value_num) : b.ph}
-                    {has && b.unit && (
+                    color: filled ? C.ink : C.mute }}>
+                    {filled ? (b.time ? fmt(v.value_s) : v.value_num) : b.ph}
+                    {filled && b.unit && (
                       <span style={{ fontSize: 12, color: C.sub,
                         marginLeft: 4 }}>{b.unit}</span>
                     )}
@@ -140,6 +149,30 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
                 </div>
               )
             })}
+
+            {/* The half isn't a benchmark — it's a session, stored with
+                its splits. But it's the sixth thing on the testing list
+                and a member looking for it looks here, so it gets a row
+                that opens the real thing. */}
+            <div onClick={onHalf} style={{ display: 'flex',
+              alignItems: 'center', gap: 12, padding: '15px 0',
+              cursor: 'pointer', borderTop: `1px solid ${C.line}` }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15.5,
+                  fontWeight: half?.total ? 600 : 500,
+                  color: half?.total ? C.ink : C.sub }}>The Salus Half</div>
+                <div style={{ ...T.small, fontSize: 12, marginTop: 3 }}>
+                  {half?.total
+                    ? 'Run it again any time — the newest one counts.'
+                    : 'Four runs, four stations. Turns the estimate into a projection.'}
+                </div>
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 800, ...T.num,
+                color: half?.total ? C.ink : C.mute }}>
+                {half?.total ? fmt(half.total) : 'not yet'}
+              </div>
+              <Ico d={I.chev} s={13} c={C.mute} w={2} />
+            </div>
           </Card>
 
           {si && (

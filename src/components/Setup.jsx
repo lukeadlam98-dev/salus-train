@@ -48,12 +48,17 @@ const Ring = ({ done, total, size = 38 }) => {
   )
 }
 
-export default function Setup({ benchmarks = {}, half, onGoToTests }) {
+export default function Setup({ benchmarks = {}, half, onGoToTests,
+                                onGoToHalf }) {
   const [open, setOpen] = useState(false)
 
   const items = [
-    ...TESTS.map(t => ({ ...t, done: !!benchmarks[t.key],
-      value: benchmarks[t.key] ? t.fmt(benchmarks[t.key]) : null })),
+    // A row with a null value is not a test that's been done.
+    ...TESTS.map(t => {
+      const v = benchmarks[t.key]
+      const filled = !!v && (v.value_num != null || v.value_s != null)
+      return { ...t, done: filled, value: filled ? t.fmt(v) : null }
+    }),
     { key: 'half', label: 'The Salus Half', why: 'The one that turns a guess into a projection.',
       done: !!half?.total, value: half?.total ? fmt(half.total) : null },
   ]
@@ -122,8 +127,14 @@ export default function Setup({ benchmarks = {}, half, onGoToTests }) {
           </div>
 
           <Btn style={{ marginTop: 22 }}
-            onClick={() => { setOpen(false); onGoToTests() }}>
-            Put in {next.label}
+            onClick={() => {
+              setOpen(false)
+              // The half is a session, not a number to type — send them
+              // to the thing itself rather than to a list with no row
+              // for it.
+              next.key === 'half' ? onGoToHalf?.() : onGoToTests()
+            }}>
+            {next.key === 'half' ? 'Run the Salus Half' : `Put in ${next.label}`}
           </Btn>
           <button onClick={() => setOpen(false)} style={{ width: '100%',
             background: 'transparent', border: 'none', color: C.sub,

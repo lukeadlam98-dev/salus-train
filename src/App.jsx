@@ -275,7 +275,8 @@ export default function App() {
                               half={half} onUpdate={patch}
                               onCoaches={() => setCoaches(true)}
                               onRaces={() => setRaces(true)}
-                              onProgress={() => setProgress(true)} />}
+                              onProgress={() => setProgress(true)}
+                              onHalf={() => setScreen('half')} />}
       {/* The nudge sits above the tabs and disappears once the five
           tests are in. Not dismissible on purpose: a member who skips
           them gets a block full of defaults and never finds out. */}
@@ -283,7 +284,8 @@ export default function App() {
           nudge covering the text field is worse than no nudge. */}
       {tab !== 'community' && (
         <Setup benchmarks={benchmarks} half={half}
-          onGoToTests={() => setTab('me')} />
+          onGoToTests={() => setTab('me')}
+          onGoToHalf={() => setScreen('half')} />
       )}
       <Tabs tab={tab} setTab={setTab} items={tabItems} />
     </Shell>
