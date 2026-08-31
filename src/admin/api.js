@@ -559,3 +559,16 @@ export async function setMemberWeek(userId, idx) {
   if (error) throw error
   return data
 }
+
+/* ---------------- the floor ---------------- */
+export async function getFloor() {
+  const { data, error } = await supabase.from('coach_floor')
+    .select('*').order('name')
+  if (error) throw error
+  return data || []
+}
+
+export async function getFloorToday() {
+  const { data } = await supabase.rpc('floor_today')
+  return data?.[0] || null
+}

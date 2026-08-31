@@ -12,10 +12,12 @@ const ago = d => {
   return days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days}d ago`
 }
 
-export default function Members() {
+// openId lets another screen — the floor, usually — send a coach
+// straight to one member rather than to the list.
+export default function Members({ openId }) {
   const [rows, setRows] = useState([])
   const [stations, setStations] = useState([])
-  const [open, setOpen] = useState(null)
+  const [open, setOpen] = useState(openId || null)
   const [err, setErr] = useState(null)
 
   useEffect(() => {

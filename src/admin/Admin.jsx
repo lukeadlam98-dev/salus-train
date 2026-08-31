@@ -9,6 +9,7 @@ import SessionEditor from './SessionEditor'
 import Home from './Home'
 import Navigation from './Navigation'
 import Weeks from './Weeks'
+import Floor from './Floor'
 import Members from './Members'
 import Boards from './Boards'
 import Dashboard from './Dashboard'
@@ -94,6 +95,10 @@ export default function Admin({ profile, onExit }) {
             <div style={{ fontSize: 10.5, color: C.mute }}>Back office</div>
           </div>
         </div>
+
+        <SideItem on={nav.view === 'floor'} onClick={() => go('floor')}>
+          <span style={{ flex: 1 }}>The floor</span>
+        </SideItem>
 
         <SideItem on={nav.view === 'club'} onClick={() => go('club')}>
           <span style={{ flex: 1 }}>The club</span>
@@ -192,7 +197,10 @@ export default function Admin({ profile, onExit }) {
           : nav.view === 'week' && week
             ? <WeekView week={week} programme={prog} onOpen={setSession}
                 onChanged={() => { loadWeeks(); loadProgrammes() }} />
-            : nav.view === 'weeks'     ? <Weeks programmeId={prog?.id}
+            : nav.view === 'floor'     ? <Floor
+                                          onOpenMember={id =>
+                                            setNav({ view: 'members', member: id })} />
+          : nav.view === 'weeks'     ? <Weeks programmeId={prog?.id}
                                           programmes={programmes}
                                           onOpenWeek={w => {
                                             loadWeeks()
@@ -204,7 +212,7 @@ export default function Admin({ profile, onExit }) {
             : nav.view === 'notices'   ? <Notices />
             : nav.view === 'movements' ? <Movements />
             : nav.view === 'photos'    ? <Photos />
-            : nav.view === 'members'   ? <Members />
+            : nav.view === 'members'   ? <Members openId={nav.member} />
             : <div style={T.body}>Nothing here.</div>}
       </div>
 
