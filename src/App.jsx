@@ -23,6 +23,7 @@ import Half     from './screens/Half'
 import Effort   from './screens/Effort'
 import Complete from './screens/Complete'
 import Tabs     from './components/Tabs'
+import Setup    from './components/Setup'
 import { SkeletonToday } from './components/Skeleton'
 import Admin    from './admin/Admin'
 
@@ -251,6 +252,11 @@ export default function App() {
                               benchmarks={benchmarks} setBenchmarks={setBenchmarks}
                               half={half} onUpdate={patch}
                               onCoaches={() => setCoaches(true)} />}
+      {/* The nudge sits above the tabs and disappears once the five
+          tests are in. Not dismissible on purpose: a member who skips
+          them gets a block full of defaults and never finds out. */}
+      <Setup benchmarks={benchmarks} half={half}
+        onGoToTests={() => setTab('me')} />
       <Tabs tab={tab} setTab={setTab} />
     </Shell>
   )
