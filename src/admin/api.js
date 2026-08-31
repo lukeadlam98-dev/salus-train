@@ -608,3 +608,9 @@ export async function setWotwMetric(sessionId, metric) {
     .update({ wotw_metric: metric }).eq('id', sessionId)
   if (error) throw error
 }
+
+// What has no image yet. Better found here than on a member's phone.
+export async function getMissingMedia() {
+  const { data } = await supabase.from('missing_media').select('*')
+  return data || []
+}

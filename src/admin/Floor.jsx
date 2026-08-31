@@ -27,6 +27,7 @@ const ago = d => {
 export default function Floor({ onOpenMember }) {
   const [rows, setRows] = useState([])
   const [today, setToday] = useState(null)
+  const [gaps, setGaps] = useState([])
   const [ready, setReady] = useState(false)
   const [err, setErr] = useState(null)
 
@@ -34,6 +35,7 @@ export default function Floor({ onOpenMember }) {
     Promise.all([
       api.getFloor().then(setRows),
       api.getFloorToday().then(setToday),
+      api.getMissingMedia().then(setGaps).catch(() => {}),
     ]).catch(e => setErr(e.message)).finally(() => setReady(true))
   }, [])
 
@@ -68,6 +70,34 @@ export default function Floor({ onOpenMember }) {
         <Stat n={hrs} label="HOURS" />
         <Stat n={gone.length} label="GONE QUIET" warn={gone.length > 0} />
       </div>
+
+      {/* ---- anything without a picture ---- */}
+      {gaps.length > 0 && (
+        <div style={{ background: C.card, border: `1px solid ${C.line}`,
+          borderRadius: 12, padding: '15px 17px', marginTop: 22,
+          boxShadow: C.shadow }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>
+            {gaps.length} thing{gaps.length === 1 ? '' : 's'} with no image
+          </div>
+          <div style={{ fontSize: 12.5, color: C.sub, marginTop: 4,
+            lineHeight: 1.5 }}>
+            Members see an empty card where a photograph should be.
+          </div>
+          <div style={{ marginTop: 11, display: 'flex', flexWrap: 'wrap',
+            gap: 6 }}>
+            {gaps.slice(0, 8).map((g, i) => (
+              <span key={i} style={{ background: C.card2, borderRadius: 7,
+                padding: '5px 10px', fontSize: 11.5, color: C.sub }}>
+                {g.what}
+              </span>
+            ))}
+            {gaps.length > 8 && (
+              <span style={{ fontSize: 11.5, color: A.mute,
+                padding: '5px 4px' }}>and {gaps.length - 8} more</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ---- who's been in ---- */}
       <Section title="IN TODAY"

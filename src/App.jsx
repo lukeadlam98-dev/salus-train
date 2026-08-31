@@ -255,28 +255,41 @@ export default function App() {
 
   return (
     <Shell>
-      {tab === 'today'   && <Today profile={profile} week={week}
-                              programme={programme} half={half} onOpen={open}
-                              onSetRace={() => setRaces(true)}
-                              onTakeClubRace={() => programme?.race_date &&
-                                patch({ race_date: programme.race_date })}
-                              onProgress={() => setProgress(true)}
-                              onCoaches={() => setCoaches(true)}
-                              onPlan={() => setPlan(true)}
-                              prediction={prediction} />}
+      {/* Tabs stay mounted once visited.
+          Unmounting throws away the screen's data, so coming back
+          refetches and shows a skeleton — which is the flash between
+          tabs. Hiding rather than unmounting makes the second visit
+          instant, and the cost is a few components sitting in memory. */}
+      <Keep on={tab === 'today'}>
+        <Today profile={profile} week={week}
+          programme={programme} half={half} onOpen={open}
+          onSetRace={() => setRaces(true)}
+          onTakeClubRace={() => programme?.race_date &&
+            patch({ race_date: programme.race_date })}
+          onProgress={() => setProgress(true)}
+          onCoaches={() => setCoaches(true)}
+          onPlan={() => setPlan(true)}
+          prediction={prediction} />
+      </Keep>
 
-      {tab === 'community' && <Community profile={profile}
-                              userId={session.user.id} />}
-      {tab === 'leaderboard' && <Board profile={profile} userId={session.user.id}
-                              onShare={() => patch({ share_on_leaderboard: true })} />}
+      <Keep on={tab === 'community'}>
+        <Community profile={profile} userId={session.user.id} />
+      </Keep>
 
-      {tab === 'me'      && <You userId={session.user.id} profile={profile}
-                              benchmarks={benchmarks} setBenchmarks={setBenchmarks}
-                              half={half} onUpdate={patch}
-                              onCoaches={() => setCoaches(true)}
-                              onRaces={() => setRaces(true)}
-                              onProgress={() => setProgress(true)}
-                              onHalf={() => setScreen('half')} />}
+      <Keep on={tab === 'leaderboard'}>
+        <Board profile={profile} userId={session.user.id}
+          onShare={() => patch({ share_on_leaderboard: true })} />
+      </Keep>
+
+      <Keep on={tab === 'me'}>
+        <You userId={session.user.id} profile={profile}
+          benchmarks={benchmarks} setBenchmarks={setBenchmarks}
+          half={half} onUpdate={patch}
+          onCoaches={() => setCoaches(true)}
+          onRaces={() => setRaces(true)}
+          onProgress={() => setProgress(true)}
+          onHalf={() => setScreen('half')} />
+      </Keep>
       {/* The nudge sits above the tabs and disappears once the five
           tests are in. Not dismissible on purpose: a member who skips
           them gets a block full of defaults and never finds out. */}
@@ -290,4 +303,17 @@ export default function App() {
       <Tabs tab={tab} setTab={setTab} items={tabItems} />
     </Shell>
   )
+}
+
+// Mount a tab the first time it's opened, then keep it.
+//
+// display:none rather than unmounting: React keeps the component's
+// state and its fetched data, so switching back is instant instead of
+// a skeleton and a refetch. Nothing renders until first visit, so the
+// app still starts on one screen's worth of work.
+function Keep({ on, children }) {
+  const [seen, setSeen] = useState(on)
+  useEffect(() => { if (on) setSeen(true) }, [on])
+  if (!seen) return null
+  return <div style={{ display: on ? 'block' : 'none' }}>{children}</div>
 }
