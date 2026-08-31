@@ -328,3 +328,42 @@ export function Suggest({ value, options = [], placeholder, onSave }) {
     </>
   )
 }
+
+
+// A real confirmation, for things that can't be undone.
+//
+// The two-tap Confirm above is right for deleting a line. It is not
+// right for deleting a week that six members have logged sessions in,
+// because "Sure?" doesn't say what is about to be lost. This one has
+// room to state the cost, and makes the destructive button the
+// quieter of the two.
+export function Ask({ title, body, confirmLabel, danger, onConfirm, onCancel }) {
+  return (
+    <>
+      <div onClick={onCancel} style={{ position: 'fixed', inset: 0,
+        background: 'rgba(26,22,19,.55)', zIndex: 300 }} />
+      <div style={{ position: 'fixed', left: '50%', top: '50%', zIndex: 310,
+        transform: 'translate(-50%,-50%)', width: 'min(440px, calc(100vw - 40px))',
+        background: C.card, border: `1px solid ${C.line}`, borderRadius: 16,
+        padding: 24, boxShadow: '0 24px 60px rgba(26,22,19,.30)' }}>
+        <div style={{ ...T.h3, fontSize: 18 }}>{title}</div>
+        <div style={{ ...T.body, fontSize: 14, marginTop: 10,
+          lineHeight: 1.55 }}>{body}</div>
+        <div style={{ display: 'flex', gap: 9, marginTop: 22,
+          justifyContent: 'flex-end' }}>
+          <button onClick={onCancel} style={{ borderRadius: 9,
+            padding: '11px 18px', fontSize: 14, fontWeight: 600,
+            cursor: 'pointer', fontFamily: F, background: C.ink,
+            border: 'none', color: C.card }}>Keep it</button>
+          <button onClick={onConfirm} style={{ borderRadius: 9,
+            padding: '11px 18px', fontSize: 14, fontWeight: 600,
+            cursor: 'pointer', fontFamily: F, background: 'transparent',
+            border: `1px solid ${danger ? C.red : C.line}`,
+            color: danger ? C.red : C.sub }}>
+            {confirmLabel || 'Delete'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}

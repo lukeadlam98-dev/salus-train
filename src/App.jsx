@@ -12,6 +12,7 @@ import SetPassword from './screens/SetPassword'
 import Onboard  from './screens/Onboard'
 import Today    from './screens/Today'
 import Plan     from './screens/Plan'
+import Block    from './screens/Block'
 import Community from './screens/Community'
 import Board    from './screens/Board'
 import Coaches  from './screens/Coaches'
@@ -199,7 +200,8 @@ export default function App() {
   /* ---------- the whole block, reached from Today ---------- */
   if (plan) return (
     <Shell>
-      <Plan week={week} programme={programme} onBack={() => setPlan(false)}
+      <Block profile={profile} programme={programme}
+        onBack={() => setPlan(false)}
         onOpen={s => { setPlan(false); open(s) }} />
     </Shell>
   )

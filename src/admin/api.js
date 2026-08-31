@@ -481,3 +481,60 @@ export async function setBlockFormat(id, patch) {
   const { error } = await supabase.from('blocks').update(patch).eq('id', id)
   if (error) throw error
 }
+
+/* ---------------- week management ---------------- */
+
+// What a week actually contains, so a delete can say what it costs
+// rather than asking "are you sure" about an unknown quantity.
+export async function weekContents(weekId) {
+  const { data: sessions } = await supabase.from('sessions')
+    .select('id, title').eq('week_id', weekId)
+  const ids = (sessions || []).map(s => s.id)
+
+  let blocks = 0, logs = 0, people = 0
+  if (ids.length) {
+    const { count: b } = await supabase.from('blocks')
+      .select('id', { count: 'exact', head: true }).in('session_id', ids)
+    blocks = b || 0
+    const { data: l } = await supabase.from('workout_logs')
+      .select('user_id').in('session_id', ids).not('ended_at', 'is', null)
+    logs = (l || []).length
+    people = new Set((l || []).map(x => x.user_id)).size
+  }
+  return { sessions: sessions || [], blocks, logs, people }
+}
+
+// Renumber whatever's left, so deleting week 3 of 8 doesn't leave a
+// gap where week 3 was.
+export async function resequenceWeeks(programmeId) {
+  const { data } = await supabase.from('weeks')
+    .select('id, idx').eq('programme_id', programmeId).order('idx')
+  await Promise.all((data || []).map((w, i) =>
+    w.idx === i + 1 ? null
+      : supabase.from('weeks').update({ idx: i + 1 }).eq('id', w.id)))
+}
+
+// Move a week up or down the block, swapping with its neighbour.
+export async function moveWeek(programmeId, weekId, dir) {
+  const { data } = await supabase.from('weeks')
+    .select('id, idx').eq('programme_id', programmeId).order('idx')
+  const rows = data || []
+  const i = rows.findIndex(w => w.id === weekId)
+  const j = i + dir
+  if (i < 0 || j < 0 || j >= rows.length) return
+  await supabase.from('weeks').update({ idx: -1 }).eq('id', rows[i].id)
+  await supabase.from('weeks').update({ idx: rows[i].idx }).eq('id', rows[j].id)
+  await supabase.from('weeks').update({ idx: rows[j].idx }).eq('id', rows[i].id)
+}
+
+// Empty a week without removing it — useful when the shape is right
+// but the content isn't.
+export async function clearWeek(weekId) {
+  const { data } = await supabase.from('sessions')
+    .select('id').eq('week_id', weekId)
+  const ids = (data || []).map(s => s.id)
+  if (ids.length) {
+    const { error } = await supabase.from('sessions').delete().in('id', ids)
+    if (error) throw error
+  }
+}

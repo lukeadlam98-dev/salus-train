@@ -555,3 +555,15 @@ export async function getBlockTarget(userId, blockId) {
   if (error) return null
   return data?.[0] || null
 }
+
+/* ---------------- the whole block ---------------- */
+export async function getMyBlock() {
+  const { data, error } = await supabase.from('my_block').select('*')
+  if (error) return []
+  return data || []
+}
+
+export async function getWeekSessions(weekId) {
+  const { data } = await supabase.rpc('week_sessions', { p_week: weekId })
+  return data || []
+}

@@ -8,6 +8,7 @@ import { Save, Field, Pick, Toggle, Btn, ImagePicker, Confirm } from './widgets'
 import SessionEditor from './SessionEditor'
 import Home from './Home'
 import Navigation from './Navigation'
+import Weeks from './Weeks'
 import Members from './Members'
 import Boards from './Boards'
 import Dashboard from './Dashboard'
@@ -133,6 +134,10 @@ export default function Admin({ profile, onExit }) {
             {!w.published && <Dot />}
           </SideItem>
         ))}
+        <SideItem on={nav.view === 'weeks'} onClick={() => go('weeks')}>
+          <span style={{ flex: 1, color: C.sub }}>Manage weeks…</span>
+        </SideItem>
+
         <div style={{ display: 'flex', gap: 5, marginTop: 6 }}>
           <button onClick={() => duplicate(week)} style={{ flex: 1,
             background: 'transparent', border: `1px dashed ${C.line}`,
@@ -187,7 +192,13 @@ export default function Admin({ profile, onExit }) {
           : nav.view === 'week' && week
             ? <WeekView week={week} programme={prog} onOpen={setSession}
                 onChanged={() => { loadWeeks(); loadProgrammes() }} />
-            : nav.view === 'nav'       ? <Navigation />
+            : nav.view === 'weeks'     ? <Weeks programmeId={prog?.id}
+                                          programmes={programmes}
+                                          onOpenWeek={w => {
+                                            loadWeeks()
+                                            setNav({ view: 'week', idx: w.idx })
+                                          }} />
+          : nav.view === 'nav'       ? <Navigation />
           : nav.view === 'home'      ? <Home />
             : nav.view === 'boards'    ? <Boards />
             : nav.view === 'notices'   ? <Notices />
