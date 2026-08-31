@@ -8,35 +8,22 @@ import { Ico, I, Avatar } from './ui'
 // find out what today is, then come back out. Showing every block
 // with its scheme and its movements means they know before they tap,
 // and can decide whether they have the hour.
-// The bar down the left says what kind of session this is. Runna uses
-// colour for the same job; without hue the same distinction has to come
-// from fill — solid for the hard days, hatched for the ones where the
-// point is not going hard.
-const EDGE = {
-  strength: { fill: C.g,     label: 'STRENGTH' },
-  half:     { fill: C.g,     label: 'THE HALF' },
-  erg:      { fill: C.sub,   label: 'ERGS' },
-  run:      { fill: C.sub,   label: 'RUNNING' },
-  rest:     { fill: C.card3, label: 'RECOVERY' },
-}
-
 export default function SessionCard({ session, blocks = [], coach,
                                       completions, onOpen }) {
   const s = session
   if (!s) return null
-  const edge = EDGE[s.kind] || EDGE.strength
+  const kind = (s.kind || 'strength').toUpperCase()
 
   return (
     <div style={{ background: C.card, borderRadius: 18, overflow: 'hidden',
       position: 'relative' }}>
-      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-        background: edge.fill, opacity: s.kind === 'rest' ? 1 : .9 }} />
+
 
       {/* ---- who and what ---- */}
-      <div style={{ padding: '15px 16px 14px 18px' }}>
+      <div style={{ padding: '15px 16px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.13em',
-            color: C.mute }}>{edge.label}</div>
+            color: C.mute }}>{kind}</div>
           <span style={{ color: C.mute, fontSize: 10 }}>·</span>
           <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>
             {DAYS[s.day - 1]}
@@ -78,9 +65,20 @@ export default function SessionCard({ session, blocks = [], coach,
           )}
 
           <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Title, then the focus pill. Nothing else — a line of
+                explanation under every session title was one line too
+                many, and the pill already says what the day is about. */}
             <div style={{ ...T.h1, fontSize: 25 }}>{s.title}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8,
               marginTop: 7, flexWrap: 'wrap' }}>
+              {/* A test is the one thing worth marking on the title row —
+                  it's the session whose number everything else is set
+                  from, and a member should know before they start. */}
+              {s.is_test && (
+                <span style={{ background: C.g, color: C.bg, borderRadius: 8,
+                  padding: '4px 9px', fontSize: 11, fontWeight: 800,
+                  letterSpacing: '.04em' }}>TEST</span>
+              )}
               {s.focus && (
                 <>
                   <span style={{ background: C.card3, borderRadius: 8,
@@ -110,16 +108,16 @@ export default function SessionCard({ session, blocks = [], coach,
                 fontSize: 11.5, fontWeight: 800, color: C.sub }}>{b.letter}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 16.5, fontWeight: 700,
-                  letterSpacing: '-.02em' }}>{b.label}</div>
+                  letterSpacing: '-.02em', color: C.ink }}>{b.label}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8,
                   marginTop: 6 }}>
                   {b.scheme && (
                     <span style={{ background: C.card3, borderRadius: 7,
                       padding: '3px 9px', fontSize: 11, fontWeight: 700,
-                      color: C.sub, flexShrink: 0,
+                      color: C.ink, flexShrink: 0,
                       whiteSpace: 'nowrap' }}>{b.scheme}</span>
                   )}
-                  <div style={{ fontSize: 12.5, color: C.mute, overflow: 'hidden',
+                  <div style={{ fontSize: 12.5, color: C.sub, overflow: 'hidden',
                     textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {b.movements.join(', ')}
                   </div>

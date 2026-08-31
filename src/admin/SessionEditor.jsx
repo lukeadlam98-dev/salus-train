@@ -3,12 +3,26 @@ import { C, T, F } from '../lib/theme'
 import { DAYS } from '../lib/format'
 import * as api from './api'
 import { Save, Field, Pick, Toggle, Btn, ImagePicker, Confirm,
-         Sortable, Grip } from './widgets'
+         Sortable, Grip, Suggest } from './widgets'
 import Preview from './Preview'
 
 const KINDS = [
   ['strength', 'Strength'], ['half', 'The Salus Half'], ['erg', 'Ergs'],
   ['run', 'Running'], ['rest', 'Rest / recovery'],
+]
+
+// The schemes a session is actually built from. Anything can still be
+// typed — these are just the ones that keep coming back, and having
+// them as pills stops "Straight set" and "Straight sets" both existing.
+const SCHEMES = [
+  'Straight sets', 'Build over 5 sets', 'Superset', 'Circuit',
+  'EMOM', 'AMRAP', 'For time', 'Intervals', 'Every 3 min', 'Pyramid',
+]
+
+const FOCUSES = [
+  'Back squat', 'Deadlift', 'Bench press', 'Strict press',
+  'Sled push', 'Sled pull', 'Wall balls', 'Burpee broad jump',
+  'Farmers carry', 'Lunges', 'Running', 'The ergs',
 ]
 
 export default function SessionEditor({ session, week, onBack }) {
@@ -74,8 +88,9 @@ export default function SessionEditor({ session, week, onBack }) {
                 </Field>
               </div>
               <Field label="Focus"
-                hint="The one movement today is really about. Shows as a chip on their card.">
-                <Save value={s.focus} placeholder="Back squat"
+                hint="The one movement today is really about. Shows as a chip on their card, next to the title.">
+                <Suggest value={s.focus} options={FOCUSES}
+                  placeholder="Back squat"
                   onSave={v => patch({ focus: v })} />
               </Field>
               <Toggle on={s.is_test} label="This is a test"
@@ -219,8 +234,11 @@ function Block({ b, movements, reload }) {
       {open && (
         <div style={{ padding: '0 13px 14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="Scheme" hint="The chip — 'Build over 5 sets'.">
-              <Save value={b.scheme} onSave={v => api.setBlock(b.id, { scheme: v })} />
+            <Field label="Scheme"
+              hint="The chip members see on this block.">
+              <Suggest value={b.scheme} options={SCHEMES}
+                placeholder="Straight sets"
+                onSave={v => api.setBlock(b.id, { scheme: v })} />
             </Field>
             <Field label="Rest note" hint="The strip under the prescription.">
               <Save value={b.rest_note}

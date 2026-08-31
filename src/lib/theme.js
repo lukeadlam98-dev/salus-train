@@ -32,18 +32,21 @@
 export const PAL = {
   bg:    '#090908',   // the ground, warm near-black
   card:  '#161514',   // a card on it
-  card2: '#232120',   // a row inside a card  — was #1D1C1A
-  card3: '#302D2A',   // a chip on that row   — was #2A2926
+  card2: '#262322',   // a row inside a card  — lighter again
+  card3: '#35312D',   // a chip on that row
   line:  '#332F2C',   // hairlines, now actually visible
-  mute:  '#66625C',
-  sub:   '#948F87',
-  ink:   '#EDE9E2',
-  g:     '#FFFCF6',   // the accent — brightest, used as a fill
+  mute:  '#736E67',
+  sub:   '#A29C93',
+  ink:   '#F6F3EE',   // body
+  g:     '#FFFFFF',   // the accent — pure white. On a near-black ground
+                      // the fills should be the brightest thing there is;
+                      // anything short of white reads as slightly dirty
+                      // rather than deliberate.
   gDeep: '#2A2725',
-  gLine: 'rgba(255,252,246,.42)',
+  gLine: 'rgba(255,255,255,.45)',
   red:   '#C4685A',
   sheet: '#1B1918',
-  gold:  '#FFFCF6', silver: '#B4AFA7', bronze: '#7A756E',
+  gold:  '#FFFFFF', silver: '#C2BDB5', bronze: '#867F77',
   shadow: 'none',
   markFilter: 'none',
 }

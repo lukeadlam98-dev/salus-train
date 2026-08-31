@@ -299,3 +299,32 @@ export function ImagePicker({ value, onChange, wide, kind = 'image' }) {
     </>
   )
 }
+
+
+// A field with the usual answers as pills above it.
+//
+// Free text meant five spellings of "Straight sets" across a block and
+// a chip row that never quite lined up. The pills are the ones that
+// actually get used; typing still works for anything else, because a
+// picker that can't be escaped is worse than no picker.
+export function Suggest({ value, options = [], placeholder, onSave }) {
+  return (
+    <>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6,
+        marginBottom: 7 }}>
+        {options.map(o => {
+          const on = value === o
+          return (
+            <button key={o} onClick={() => onSave(on ? '' : o)}
+              style={{ borderRadius: 999, padding: '6px 11px', fontSize: 12,
+                fontWeight: 600, cursor: 'pointer', fontFamily: F,
+                background: on ? C.ink : C.card2,
+                border: `1px solid ${on ? C.ink : C.line}`,
+                color: on ? C.card : C.sub }}>{o}</button>
+          )
+        })}
+      </div>
+      <Save value={value} placeholder={placeholder} onSave={onSave} />
+    </>
+  )
+}

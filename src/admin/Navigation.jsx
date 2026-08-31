@@ -155,9 +155,9 @@ export default function Navigation() {
                   gap: 3, padding: '8px 0 7px', borderRadius: 999,
                   background: i === 0 ? '#2A2926' : 'transparent' }}>
                   <div style={{ width: 16, height: 16, borderRadius: 4,
-                    background: i === 0 ? '#EDE9E2' : '#3A3733' }} />
+                    background: i === 0 ? '#F6F3EE' : '#3A3733' }} />
                   <span style={{ fontSize: 8.5, fontWeight: i === 0 ? 700 : 600,
-                    color: i === 0 ? '#EDE9E2' : '#5E5B56',
+                    color: i === 0 ? '#F6F3EE' : '#736E67',
                     overflow: 'hidden', textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap', maxWidth: 62 }}>{t.label}</span>
                 </div>
