@@ -476,3 +476,29 @@ export async function getCommunitySections() {
     .from('community_sections').select('*').eq('visible', true).order('ord')
   return data || []
 }
+
+/* ---------------- races ---------------- */
+export async function getRaces() {
+  const { data, error } = await supabase.from('my_races').select('*')
+  if (error) return []
+  return data || []
+}
+
+export async function addRace(userId, race) {
+  const { data, error } = await supabase.from('races')
+    .insert({ user_id: userId, ...race }).select().single()
+  if (error) throw error
+  return data
+}
+
+export const updateRace = async (id, patch) => {
+  const { error } = await supabase.from('races').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+export const deleteRace = id => supabase.from('races').delete().eq('id', id)
+
+export async function setTargetRace(id) {
+  const { error } = await supabase.rpc('set_target_race', { p_race: id })
+  if (error) throw error
+}

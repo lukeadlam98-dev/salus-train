@@ -16,6 +16,7 @@ import Community from './screens/Community'
 import Board    from './screens/Board'
 import Coaches  from './screens/Coaches'
 import Progress from './screens/Progress'
+import Races    from './screens/Races'
 import Run      from './screens/Run'
 import You      from './screens/You'
 import Session  from './screens/Session'
@@ -47,6 +48,7 @@ export default function App() {
   const [plan, setPlan] = useState(false)
   const [coaches, setCoaches] = useState(false)
   const [progress, setProgress] = useState(false)
+  const [races, setRaces] = useState(false)
   const [screen, setScreen] = useState(null)   // null | session | half | effort | done
   const [active, setActive] = useState(null)   // the session being worked
   const [result, setResult] = useState(null)
@@ -202,6 +204,14 @@ export default function App() {
     </Shell>
   )
 
+  /* ---------- races ---------- */
+  if (races) return (
+    <Shell>
+      <Races userId={session.user.id} prediction={prediction}
+        onBack={() => { setRaces(false); reload() }} />
+    </Shell>
+  )
+
   /* ---------- progress ---------- */
   if (progress) return (
     <Shell>
@@ -238,7 +248,7 @@ export default function App() {
     <Shell>
       {tab === 'today'   && <Today profile={profile} week={week}
                               programme={programme} half={half} onOpen={open}
-                              onSetRace={() => setTab('me')}
+                              onSetRace={() => setRaces(true)}
                               onTakeClubRace={() => programme?.race_date &&
                                 patch({ race_date: programme.race_date })}
                               onProgress={() => setProgress(true)}
@@ -255,7 +265,8 @@ export default function App() {
       {tab === 'me'      && <You userId={session.user.id} profile={profile}
                               benchmarks={benchmarks} setBenchmarks={setBenchmarks}
                               half={half} onUpdate={patch}
-                              onCoaches={() => setCoaches(true)} />}
+                              onCoaches={() => setCoaches(true)}
+                              onRaces={() => setRaces(true)} />}
       {/* The nudge sits above the tabs and disappears once the five
           tests are in. Not dismissible on purpose: a member who skips
           them gets a block full of defaults and never finds out. */}

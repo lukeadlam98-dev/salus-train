@@ -19,7 +19,7 @@ const BM = [
 ]
 
 export default function You({ userId, profile, benchmarks, setBenchmarks,
-                              half, onUpdate, onCoaches }) {
+                              half, onUpdate, onCoaches, onRaces }) {
   const [pad, setPad] = useState(null)
   const [editRace, setEditRace] = useState(false)
   const [score, setScore] = useState(null)
@@ -185,6 +185,19 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
 
       <Paces fivekSeconds={benchmarks?.fivek?.value_s} />
 
+      <Label style={{ margin: '26px 0 11px' }}>RACES</Label>
+      <Card onClick={onRaces}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 600 }}>My races</div>
+            <div style={{ ...T.small, marginTop: 3 }}>
+              What's booked, and how the ones you've done went.
+            </div>
+          </div>
+          <Ico d={I.chev} s={14} c={C.mute} w={2} />
+        </div>
+      </Card>
+
       <Label style={{ margin: '26px 0 11px' }}>COACHES</Label>
       <Card onClick={onCoaches}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -201,6 +214,19 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
       {profile?.role === 'admin' && (
         <>
           <Paces fivekSeconds={benchmarks?.fivek?.value_s} />
+
+      <Label style={{ margin: '26px 0 11px' }}>RACES</Label>
+      <Card onClick={onRaces}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 600 }}>My races</div>
+            <div style={{ ...T.small, marginTop: 3 }}>
+              What's booked, and how the ones you've done went.
+            </div>
+          </div>
+          <Ico d={I.chev} s={14} c={C.mute} w={2} />
+        </div>
+      </Card>
 
       <Label style={{ margin: '26px 0 11px' }}>COACHES</Label>
           <Card onClick={() => { window.location.search = '?admin' }}>
