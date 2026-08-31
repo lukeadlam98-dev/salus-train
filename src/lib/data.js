@@ -545,3 +545,13 @@ export function onNewMessage(fn) {
     .subscribe()
   return () => supabase.removeChannel(ch)
 }
+
+// What this block asks of this member — a weight from their tested max,
+// a pace from their 5km, or an RPE. Null when there's nothing to work
+// from, because a made-up target is worse than none.
+export async function getBlockTarget(userId, blockId) {
+  const { data, error } = await supabase.rpc('block_target',
+    { p_user: userId, p_block: blockId })
+  if (error) return null
+  return data?.[0] || null
+}

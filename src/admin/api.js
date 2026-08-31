@@ -474,3 +474,10 @@ export async function reorderCommunitySections(ids) {
   await Promise.all(ids.map((id, i) =>
     supabase.from('community_sections').update({ ord: i + 1 }).eq('id', id)))
 }
+
+// One write for the whole format, so a coach changing AMRAP to EMOM
+// doesn't leave a stale window behind.
+export async function setBlockFormat(id, patch) {
+  const { error } = await supabase.from('blocks').update(patch).eq('id', id)
+  if (error) throw error
+}

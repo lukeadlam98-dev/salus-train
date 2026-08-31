@@ -6,6 +6,7 @@ import { Card, Label, Btn, Chip, Back, Ico, I, page } from '../components/ui'
 import Photo from '../components/Photo'
 import { P } from '../lib/theme'
 import Keypad from '../components/Keypad'
+import BlockTimer from '../components/BlockTimer'
 import { SkeletonSession } from '../components/Skeleton'
 import { getCoaches } from '../lib/data'
 
@@ -207,6 +208,10 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
           </div>
 
           {b.scheme && <Chip>{b.scheme}</Chip>}
+
+          {/* A clock, where the format needs one. Straight sets get
+              nothing — a rest timer nobody asked for is just noise. */}
+          <BlockTimer block={b} />
 
           <div style={{ marginTop: b.scheme ? 4 : 0 }}>
             {b.block_lines.map(l => {

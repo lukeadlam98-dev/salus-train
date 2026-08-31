@@ -5,6 +5,7 @@ import * as api from './api'
 import { Save, Field, Pick, Toggle, Btn, ImagePicker, Confirm,
          Sortable, Grip, Suggest } from './widgets'
 import Preview from './Preview'
+import BlockFormat, { schemeOf } from './BlockFormat'
 
 const KINDS = [
   ['strength', 'Strength'], ['half', 'The Salus Half'], ['erg', 'Ergs'],
@@ -233,14 +234,17 @@ function Block({ b, movements, reload }) {
 
       {open && (
         <div style={{ padding: '0 13px 14px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="Scheme"
-              hint="The chip members see on this block.">
-              <Suggest value={b.scheme} options={SCHEMES}
-                placeholder="Straight sets"
-                onSave={v => api.setBlock(b.id, { scheme: v })} />
-            </Field>
-            <Field label="Rest note" hint="The strip under the prescription.">
+          <BlockFormat block={b}
+            onChange={patch => api.setBlockFormat(b.id, {
+              ...patch,
+              // The chip is written alongside, so anything reading
+              // scheme directly keeps working.
+              scheme: schemeOf({ ...b, ...patch }),
+            }).then(reload)} />
+
+          <div style={{ marginTop: 12 }}>
+            <Field label="Anything else"
+              hint="A note under the prescription — 'rest as needed', 'partner up'.">
               <Save value={b.rest_note}
                 onSave={v => api.setBlock(b.id, { rest_note: v })} />
             </Field>
