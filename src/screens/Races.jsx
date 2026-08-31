@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { C, T, F } from '../lib/theme'
 import { hhmm, fmt } from '../lib/format'
-import { getRaces, addRace, updateRace, deleteRace, setTargetRace } from '../lib/data'
+import { getRaces, addRace, updateRace, deleteRace, setTargetRace,
+         getRaceCatalog } from '../lib/data'
 import { Card, Label, Btn, Back, Sheet, Ico, I, page } from '../components/ui'
 import Keypad from '../components/Keypad'
 import Empty from '../components/Empty'
@@ -138,6 +139,10 @@ export default function Races({ userId, prediction, onBack }) {
 
 function RaceSheet({ userId, race, prediction, onClose, onSaved }) {
   const isNew = !race
+  // A new race starts at the fixture list. Typing is still there for
+  // anything not on it — a local hyrox-style event, a parkrun, a
+  // marathon — but nobody should be typing "HYROX London" by hand.
+  const [picking, setPicking] = useState(isNew)
   const past = race && new Date(race.race_date) < new Date()
 
   const [name, setName] = useState(race?.name || '')
@@ -185,6 +190,16 @@ function RaceSheet({ userId, race, prediction, onClose, onSaved }) {
     border: `1px solid ${C.line}`, borderRadius: 12, padding: '14px 15px',
     fontSize: 15.5, outline: 'none', fontFamily: F, marginBottom: 10,
   }
+
+  if (picking) return (
+    <Catalog onClose={onClose}
+      onManual={() => setPicking(false)}
+      onPick={r => {
+        setName(r.name); setDate(r.race_date)
+        setPlace([r.venue, r.city].filter(Boolean).join(', '))
+        setPicking(false)
+      }} />
+  )
 
   return (
     <Sheet onClose={onClose}>
@@ -269,6 +284,91 @@ function RaceSheet({ userId, race, prediction, onClose, onSaved }) {
           onClose={() => setPad(false)}
           onSave={v => { setResult(v); setPad(false) }} />
       )}
+    </Sheet>
+  )
+}
+
+
+// The fixture list. Two series, filtered, nearest first.
+function Catalog({ onPick, onManual, onClose }) {
+  const [series, setSeries] = useState(null)
+  const [rows, setRows] = useState([])
+  const [ready, setReady] = useState(false)
+  const [q, setQ] = useState('')
+
+  useEffect(() => {
+    setReady(false)
+    getRaceCatalog({ series }).then(setRows).finally(() => setReady(true))
+  }, [series])
+
+  const shown = rows.filter(r => !q.trim() ||
+    `${r.name} ${r.city} ${r.country}`.toLowerCase().includes(q.toLowerCase()))
+
+  return (
+    <Sheet onClose={onClose}>
+      <div style={{ ...T.h2 }}>Pick your race</div>
+      <p style={{ ...T.small, marginTop: 7 }}>
+        The published HYROX and ATHX calendars. Anything else, add it by hand.
+      </p>
+
+      <div style={{ display: 'flex', gap: 7, marginTop: 16 }}>
+        {[[null, 'All'], ['HYROX', 'HYROX'], ['ATHX', 'ATHX']].map(([k, l]) => (
+          <button key={l} onClick={() => setSeries(k)}
+            style={{ flex: 1, borderRadius: 999, padding: '11px 0',
+              fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: F,
+              background: series === k ? C.ink : C.card2,
+              border: `1px solid ${series === k ? C.ink : C.line}`,
+              color: series === k ? C.bg : C.sub }}>{l}</button>
+        ))}
+      </div>
+
+      <input value={q} onChange={e => setQ(e.target.value)}
+        placeholder="London, Birmingham, Paris…"
+        style={{ width: '100%', background: C.card2, color: C.ink,
+          border: `1px solid ${C.line}`, borderRadius: 12, padding: '13px 15px',
+          fontSize: 15, outline: 'none', fontFamily: F, marginTop: 10 }} />
+
+      <div style={{ maxHeight: '46vh', overflowY: 'auto', marginTop: 14 }}
+        className="nb">
+        {!ready && <div style={{ ...T.body, padding: '20px 0' }}>Loading…</div>}
+        {ready && shown.length === 0 && (
+          <div style={{ ...T.body, fontSize: 13.5, padding: '20px 0' }}>
+            Nothing matching. Add it by hand below.
+          </div>
+        )}
+        {shown.map((r, i) => (
+          <button key={r.id} onClick={() => onPick(r)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center',
+              gap: 12, padding: '13px 0', background: 'transparent',
+              border: 'none', borderTop: i ? `1px solid ${C.line}` : 'none',
+              cursor: 'pointer', fontFamily: F, textAlign: 'left' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink,
+                overflow: 'hidden', textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap' }}>{r.name}</div>
+              <div style={{ fontSize: 12, color: C.mute, marginTop: 3 }}>
+                {[r.venue, r.city].filter(Boolean).join(', ')}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>
+                {new Date(r.race_date).toLocaleDateString('en-GB',
+                  { day: 'numeric', month: 'short' })}
+              </div>
+              <div style={{ fontSize: 11, color: C.mute, marginTop: 2 }}>
+                {r.days_away} days
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <button onClick={onManual} style={{ width: '100%',
+        background: 'transparent', border: `1px solid ${C.line}`,
+        borderRadius: 999, padding: '15px 0', fontSize: 14.5, fontWeight: 600,
+        color: C.sub, cursor: 'pointer', fontFamily: F, marginTop: 16 }}>
+        It's not on the list
+      </button>
     </Sheet>
   )
 }

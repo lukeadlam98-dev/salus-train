@@ -502,3 +502,15 @@ export async function setTargetRace(id) {
   const { error } = await supabase.rpc('set_target_race', { p_race: id })
   if (error) throw error
 }
+
+/* ---------------- the race catalogue ---------------- */
+// Real fixtures, so members pick rather than type. Five spellings of
+// "HYROX London" and one wrong date is what typing gets you.
+export async function getRaceCatalog({ series, region } = {}) {
+  let q = supabase.from('upcoming_races').select('*')
+  if (series) q = q.eq('series', series)
+  if (region) q = q.eq('region', region)
+  const { data, error } = await q
+  if (error) return []
+  return data || []
+}
