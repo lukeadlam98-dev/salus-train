@@ -459,3 +459,20 @@ export async function getWeekDone(userId, sessionIds) {
     .not('ended_at', 'is', null).in('session_id', sessionIds)
   return new Set((data || []).map(r => r.session_id)).size
 }
+
+/* ---------------- navigation ---------------- */
+// The tab labels come from the database so the back office isn't
+// describing something it can't change. The keys never do — those are
+// what the app routes on.
+export async function getTabs() {
+  const { data, error } = await supabase
+    .from('app_tabs').select('*').eq('visible', true).order('ord')
+  if (error) return null          // fall back to the built-in four
+  return data?.length ? data : null
+}
+
+export async function getCommunitySections() {
+  const { data } = await supabase
+    .from('community_sections').select('*').eq('visible', true).order('ord')
+  return data || []
+}

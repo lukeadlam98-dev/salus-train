@@ -3,7 +3,7 @@ import { supabase } from './lib/supabase'
 import { PAL, vars, C, F, T } from './lib/theme'
 import {
   getProfile, updateProfile, getBenchmarks, getWeek,
-  getHalf, getMultiplier, getMyProgramme, getConfig, getPrediction,
+  getHalf, getMultiplier, getMyProgramme, getConfig, getPrediction, getTabs,
 } from './lib/data'
 import { summarise, DEFAULT_MULTIPLIER } from './lib/half'
 
@@ -39,6 +39,7 @@ export default function App() {
   const [multiplier, setMultiplier] = useState(DEFAULT_MULTIPLIER)
   const [cfg, setCfg] = useState({})
   const [prediction, setPrediction] = useState(null)
+  const [tabItems, setTabItems] = useState(null)
   const [recovery, setRecovery] = useState(false)
   const [linkErr, setLinkErr] = useState(null)
 
@@ -57,7 +58,10 @@ export default function App() {
   /* ---------- auth ---------- */
   // The splash needs the media config before anyone has signed in,
   // so this runs on its own rather than waiting for a session.
-  useEffect(() => { getConfig().then(setCfg).catch(() => {}) }, [])
+  useEffect(() => {
+    getConfig().then(setCfg).catch(() => {})
+    getTabs().then(setTabItems).catch(() => {})
+  }, [])
 
   useEffect(() => {
     // A link that has expired or been used comes back with the reason
@@ -257,7 +261,7 @@ export default function App() {
           them gets a block full of defaults and never finds out. */}
       <Setup benchmarks={benchmarks} half={half}
         onGoToTests={() => setTab('me')} />
-      <Tabs tab={tab} setTab={setTab} />
+      <Tabs tab={tab} setTab={setTab} items={tabItems} />
     </Shell>
   )
 }

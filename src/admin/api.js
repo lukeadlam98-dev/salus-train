@@ -443,3 +443,34 @@ export async function setCoach(id, patch) {
   const { error } = await supabase.from('coaches').update(patch).eq('id', id)
   if (error) throw error
 }
+
+/* ---------------- navigation ---------------- */
+export async function listTabs() {
+  const { data, error } = await supabase.from('app_tabs').select('*').order('ord')
+  if (error) throw error
+  return data || []
+}
+export async function setTab(id, patch) {
+  const { error } = await supabase.from('app_tabs').update(patch).eq('id', id)
+  if (error) throw error
+}
+export async function reorderTabs(ids) {
+  await Promise.all(ids.map((id, i) =>
+    supabase.from('app_tabs').update({ ord: i + 1 }).eq('id', id)))
+}
+
+export async function listCommunitySections() {
+  const { data, error } = await supabase
+    .from('community_sections').select('*').order('ord')
+  if (error) throw error
+  return data || []
+}
+export async function setCommunitySection(id, patch) {
+  const { error } = await supabase
+    .from('community_sections').update(patch).eq('id', id)
+  if (error) throw error
+}
+export async function reorderCommunitySections(ids) {
+  await Promise.all(ids.map((id, i) =>
+    supabase.from('community_sections').update({ ord: i + 1 }).eq('id', id)))
+}

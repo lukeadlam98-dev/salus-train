@@ -45,21 +45,21 @@ export default function Insights({ days, raceDate, programme, half, prediction,
           {set ? (
             <>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-                <div style={{ fontSize: 52, fontWeight: 900, letterSpacing: '-.05em',
+                <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: '-.05em',
                   lineHeight: .9, ...T.num }}>{days}</div>
                 <div style={{ paddingBottom: 3 }}>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: C.sub }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 700, color: C.sub }}>
                     days to go
                   </div>
                 </div>
               </div>
-              <div style={{ fontSize: 14, color: C.mute, marginTop: 9 }}>
+              <div style={{ fontSize: 12.5, color: C.mute, marginTop: 8 }}>
                 {programme?.race_name || 'Your competition'} · {raceDate}
               </div>
             </>
           ) : (
             <>
-              <div style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-.03em' }}>
+              <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-.03em' }}>
                 Add my competition
               </div>
               <div style={{ fontSize: 12.5, color: C.sub, marginTop: 5 }}>
@@ -73,11 +73,11 @@ export default function Insights({ days, raceDate, programme, half, prediction,
       {/* ---- the block, as one bar ---- */}
       <div style={{ padding: '15px 16px 16px', borderTop: `1px solid ${C.line}` }}>
         <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 10 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 700 }}>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>
             Week {week ?? 1} of {total}
           </div>
           <div style={{ flex: 1 }} />
-          <div style={{ fontSize: 14, color: C.sub, ...T.num }}>
+          <div style={{ fontSize: 12.5, color: C.sub, ...T.num }}>
             {done}/{real.length} this week
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function Insights({ days, raceDate, programme, half, prediction,
         <div style={{ background: C.card2, borderTop: `1px solid ${C.line}`,
           padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.35 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.35 }}>
               The block is aimed at {programme.race_name}
             </div>
             <div style={{ fontSize: 11.5, color: C.mute, marginTop: 3 }}>
@@ -116,7 +116,7 @@ export default function Insights({ days, raceDate, programme, half, prediction,
             </div>
           </div>
           <button onClick={onTakeClubRace} style={{ border: 'none',
-            borderRadius: 999, padding: '12px 18px', fontSize: 14.5, fontWeight: 700,
+            borderRadius: 999, padding: '11px 16px', fontSize: 13.5, fontWeight: 700,
             cursor: 'pointer', fontFamily: F, background: C.g, color: C.bg,
             flexShrink: 0 }}>That's me</button>
         </div>
@@ -135,10 +135,10 @@ export default function Insights({ days, raceDate, programme, half, prediction,
           alignItems: 'center', gap: 11, cursor: 'pointer' }}>
           <Ico d={I.chart} s={15} c={C.g} w={2} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700 }}>
               {band.exact ? 'Projected' : 'Estimated'} {band.text}
             </div>
-            <div style={{ fontSize: 13, color: C.mute, marginTop: 3 }}>
+            <div style={{ fontSize: 11.5, color: C.mute, marginTop: 2 }}>
               {band.exact
                 ? `from your half in week ${half.week ?? 1}`
                 : `${prediction.basis} · the half tightens it`}

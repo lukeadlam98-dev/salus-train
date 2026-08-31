@@ -65,9 +65,9 @@ export default function Today({ profile, week, programme, half, onOpen,
         {streak > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 7,
             background: C.card, border: `1px solid ${C.line}`, borderRadius: 999,
-            padding: '9px 14px', flexShrink: 0 }}>
-            <Ico d={I.bolt} s={15} c={C.g} w={2} />
-            <span style={{ fontSize: 15.5, fontWeight: 800, ...T.num }}>
+            padding: '8px 12px', flexShrink: 0 }}>
+            <Ico d={I.bolt} s={13} c={C.g} w={2} />
+            <span style={{ fontSize: 14, fontWeight: 800, ...T.num }}>
               {streak}
             </span>
           </div>
@@ -88,9 +88,9 @@ export default function Today({ profile, week, programme, half, onOpen,
               display: 'grid', justifyItems: 'center', gap: 6, padding: '4px 0',
               fontFamily: 'inherit',
             }}>
-              <span style={{ fontSize: 14, fontWeight: on ? 700 : 500,
+              <span style={{ fontSize: 12.5, fontWeight: on ? 700 : 500,
                 color: on ? C.ink : C.mute }}>{d}</span>
-              <span style={{ fontSize: 17, fontWeight: on ? 800 : 600,
+              <span style={{ fontSize: 15, fontWeight: on ? 800 : 600,
                 color: on ? C.ink : C.mute, ...T.num }}>{date.getDate()}</span>
               <span style={{
                 width: 5, height: 5, borderRadius: 999, marginTop: 1,
@@ -175,11 +175,11 @@ const Chip = ({ icon, label, onClick, disabled }) => (
   <button onClick={disabled ? undefined : onClick} disabled={disabled}
     style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 9,
       background: C.card, border: `1px solid ${C.line}`, borderRadius: 999,
-      padding: '13px 19px', fontSize: 15, fontWeight: 600,
+      padding: '11px 16px', fontSize: 13.5, fontWeight: 600,
       color: disabled ? C.mute : C.ink, opacity: disabled ? .5 : 1,
       cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit',
       whiteSpace: 'nowrap' }}>
-    <Ico d={icon} s={17} c={disabled ? C.mute : C.sub} w={1.9} />
+    <Ico d={icon} s={15} c={disabled ? C.mute : C.sub} w={1.9} />
     {label}
   </button>
 )

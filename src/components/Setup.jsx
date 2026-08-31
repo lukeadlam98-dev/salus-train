@@ -26,7 +26,7 @@ const TESTS = [
     fmt: v => fmt(v.value_s) },
 ]
 
-const Ring = ({ done, total, size = 38 }) => {
+const Ring = ({ done, total, size = 34 }) => {
   const r = (size - 4.5) / 2
   const c = 2 * Math.PI * r
   return (
@@ -41,7 +41,7 @@ const Ring = ({ done, total, size = 38 }) => {
           style={{ transition: 'stroke-dashoffset .45s' }} />
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'grid',
-        placeItems: 'center', fontSize: 11.5, fontWeight: 800, ...T.num }}>
+        placeItems: 'center', fontSize: 10.5, fontWeight: 800, ...T.num }}>
         {done}/{total}
       </div>
     </div>
@@ -68,16 +68,16 @@ export default function Setup({ benchmarks = {}, half, onGoToTests }) {
         position: 'fixed', left: 14, right: 14,
         bottom: 'calc(82px + env(safe-area-inset-bottom))', zIndex: 40,
         background: C.card, border: `1px solid ${C.line}`, borderRadius: 999,
-        padding: '13px 15px 13px 20px', display: 'flex', alignItems: 'center',
+        padding: '11px 14px 11px 18px', display: 'flex', alignItems: 'center',
         gap: 12, cursor: 'pointer', fontFamily: F, maxWidth: 492,
         margin: '0 auto', boxShadow: '0 8px 26px rgba(0,0,0,.45)',
         animation: 'up .35s ease',
       }}>
         <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-          <div style={{ fontSize: 15.5, fontWeight: 700, color: C.ink }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>
             Finish your testing
           </div>
-          <div style={{ fontSize: 13, color: C.mute, marginTop: 3,
+          <div style={{ fontSize: 11.5, color: C.mute, marginTop: 2,
             overflow: 'hidden', textOverflow: 'ellipsis',
             whiteSpace: 'nowrap' }}>
             Next: {next.label}

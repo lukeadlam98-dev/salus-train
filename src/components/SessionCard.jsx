@@ -35,7 +35,7 @@ export default function SessionCard({ session, blocks = [], coach,
       {/* ---- who and what ---- */}
       <div style={{ padding: '15px 16px 14px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: '.13em',
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.13em',
             color: C.mute }}>{edge.label}</div>
           <span style={{ color: C.mute, fontSize: 10 }}>·</span>
           <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>
@@ -48,7 +48,7 @@ export default function SessionCard({ session, blocks = [], coach,
           )}
           <div style={{ flex: 1 }} />
           {completions?.people > 0 && (
-            <div style={{ fontSize: 13.5, color: C.sub }}>
+            <div style={{ fontSize: 12, color: C.sub }}>
               <b style={{ color: C.g, fontWeight: 700 }}>{completions.people}</b>
               {' '}{completions.people === 1 ? 'has' : 'have'} done this
             </div>
@@ -78,16 +78,16 @@ export default function SessionCard({ session, blocks = [], coach,
           )}
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ ...T.h1, fontSize: 30 }}>{s.title}</div>
+            <div style={{ ...T.h1, fontSize: 25 }}>{s.title}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8,
               marginTop: 7, flexWrap: 'wrap' }}>
               {s.focus && (
                 <>
                   <span style={{ background: C.card3, borderRadius: 8,
-                    padding: '5px 11px', fontSize: 13, fontWeight: 700 }}>
+                    padding: '4px 9px', fontSize: 11.5, fontWeight: 700 }}>
                     Focus
                   </span>
-                  <span style={{ fontSize: 15, color: C.sub }}>{s.focus}</span>
+                  <span style={{ fontSize: 13.5, color: C.sub }}>{s.focus}</span>
                 </>
               )}
               {!s.focus && s.tag && (
@@ -109,17 +109,17 @@ export default function SessionCard({ session, blocks = [], coach,
                 background: C.card3, display: 'grid', placeItems: 'center',
                 fontSize: 11.5, fontWeight: 800, color: C.sub }}>{b.letter}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 19, fontWeight: 700,
+                <div style={{ fontSize: 16.5, fontWeight: 700,
                   letterSpacing: '-.02em' }}>{b.label}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8,
                   marginTop: 6 }}>
                   {b.scheme && (
                     <span style={{ background: C.card3, borderRadius: 7,
-                      padding: '4px 10px', fontSize: 12.5, fontWeight: 700,
+                      padding: '3px 9px', fontSize: 11, fontWeight: 700,
                       color: C.sub, flexShrink: 0,
                       whiteSpace: 'nowrap' }}>{b.scheme}</span>
                   )}
-                  <div style={{ fontSize: 14, color: C.mute, overflow: 'hidden',
+                  <div style={{ fontSize: 12.5, color: C.mute, overflow: 'hidden',
                     textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {b.movements.join(', ')}
                   </div>
@@ -134,15 +134,15 @@ export default function SessionCard({ session, blocks = [], coach,
       <div style={{ padding: 14, background: C.card2,
         borderTop: `1px solid ${C.line}` }}>
         <button onClick={onOpen} style={{ width: '100%', border: 'none',
-          borderRadius: 999, padding: '18px 0', fontSize: 17, fontWeight: 700,
+          borderRadius: 999, padding: '16px 0', fontSize: 15.5, fontWeight: 700,
           cursor: 'pointer', fontFamily: F, background: C.ink, color: C.bg }}>
           {s.kind === 'half' ? 'Start the half'
             : s.kind === 'run' ? 'Start the run'
             : 'Start the session'}
         </button>
         {s.est_min && (
-          <div style={{ textAlign: 'center', fontSize: 13.5, color: C.mute,
-            marginTop: 11 }}>About {s.est_min} minutes</div>
+          <div style={{ textAlign: 'center', fontSize: 12, color: C.mute,
+            marginTop: 9 }}>About {s.est_min} minutes</div>
         )}
       </div>
     </div>

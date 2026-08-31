@@ -7,6 +7,7 @@ import { adminVars } from './theme'
 import { Save, Field, Pick, Toggle, Btn, ImagePicker, Confirm } from './widgets'
 import SessionEditor from './SessionEditor'
 import Home from './Home'
+import Navigation from './Navigation'
 import Members from './Members'
 import Boards from './Boards'
 import Dashboard from './Dashboard'
@@ -148,9 +149,10 @@ export default function Admin({ profile, onExit }) {
         </div>
 
         <SideLabel style={{ marginTop: 24 }}>THE APP</SideLabel>
-        {[['home', 'Members\u2019 home'], ['boards', 'Leaderboards'],
-          ['notices', 'Notices'], ['movements', 'Movements'],
-          ['photos', 'Photos'], ['members', 'Members']].map(([k, l]) => (
+        {[['nav', 'Screens & tabs'], ['home', 'Programmes & words'],
+          ['boards', 'Leaderboards'], ['notices', 'Notices'],
+          ['movements', 'Movements'], ['photos', 'Photos'],
+          ['members', 'Members']].map(([k, l]) => (
           <SideItem key={k} on={nav.view === k} onClick={() => go(k)}>
             <span style={{ flex: 1 }}>{l}</span>
           </SideItem>
@@ -185,7 +187,8 @@ export default function Admin({ profile, onExit }) {
           : nav.view === 'week' && week
             ? <WeekView week={week} programme={prog} onOpen={setSession}
                 onChanged={() => { loadWeeks(); loadProgrammes() }} />
-            : nav.view === 'home'      ? <Home />
+            : nav.view === 'nav'       ? <Navigation />
+          : nav.view === 'home'      ? <Home />
             : nav.view === 'boards'    ? <Boards />
             : nav.view === 'notices'   ? <Notices />
             : nav.view === 'movements' ? <Movements />

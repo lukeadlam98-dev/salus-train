@@ -78,14 +78,14 @@ export const F = "'Inter', -apple-system, system-ui, sans-serif"
 // phone at arm's length in a gym that difference is legibility rather
 // than taste.
 export const SIZE = {
-  display: 62,   // the countdown
-  xl:      34,   // a screen someone lands on
-  h1:      28,   // screen titles
-  h2:      22,   // section titles
-  h3:      19,   // card titles
-  body:    16,   // reading
-  small:   14,   // secondary, captions
-  micro:   12,   // labels, timestamps
+  display: 48,   // the countdown
+  xl:      29,   // a screen someone lands on
+  h1:      24,   // screen titles
+  h2:      19,   // section titles
+  h3:      17,   // card titles
+  body:    15,   // reading
+  small:   13,   // secondary, captions
+  micro:   11,   // labels, timestamps
 }
 
 export const T = {

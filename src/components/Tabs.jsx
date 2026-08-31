@@ -18,6 +18,11 @@ import { Ico, I, Mark } from './ui'
 // reachable from the chip row where it belongs. Community went
 // in because that's the thing a club app has that a training app
 // doesn't — the room, when you're training alone at six.
+// Keyed by route, so a renamed tab keeps its icon.
+const ICONS = {
+  today: null, community: I.users, leaderboard: I.chart, me: I.user,
+}
+
 const ITEMS = [
   ['today',       'Train',       null],
   ['community',   'Community',   I.users],
@@ -25,17 +30,22 @@ const ITEMS = [
   ['me',          'Me',          I.user],
 ]
 
-export default function Tabs({ tab, setTab }) {
+export default function Tabs({ tab, setTab, items }) {
+  // Labels come from the database when they're there; ITEMS is the
+  // fallback so the app still works before the migration has run.
+  const rows = items?.length
+    ? items.map(t => [t.key, t.label, ICONS[t.key] ?? null])
+    : ITEMS
   return (
     <div style={{
       position: 'fixed', left: 14, right: 14,
       bottom: 'calc(13px + env(safe-area-inset-bottom))',
       maxWidth: 492, margin: '0 auto',
       background: C.sheet, border: `1px solid ${C.line}`, borderRadius: 999,
-      padding: 6, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
+      padding: 5, display: 'grid', gridTemplateColumns: `repeat(${(items?.length || 4)},1fr)`,
       zIndex: 60, boxShadow: C.shadow,
     }}>
-      {ITEMS.map(([k, label, d]) => {
+      {rows.map(([k, label, d]) => {
         const on = tab === k
         return (
           <button key={k} onClick={() => setTab(k)} style={{
