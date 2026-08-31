@@ -170,8 +170,14 @@ function Member({ id, onBack }) {
         ← All members
       </Btn>
 
+      {/* Which week they're on. A coach needs to move this for someone
+          joining late, coming back from a fortnight off, or repeating a
+          week that didn't land. */}
+      <WeekControl id={id} idx={p.week_idx || 1}
+        onSet={v => setD({ ...d, profile: { ...p, week_idx: v } })} />
+
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
-        <div>
+        <div style={{ flex: 1 }}>
           <h1 style={T.h1}>{p.name || 'No name yet'}</h1>
           <p style={{ ...T.body, marginTop: 6 }}>
             {p.race_date
@@ -301,3 +307,36 @@ const Panel = ({ title, sub, children, style }) => (
     {children}
   </div>
 )
+
+
+function WeekControl({ id, idx, onSet }) {
+  const [busy, setBusy] = useState(false)
+  const go = async v => {
+    setBusy(true)
+    try { const n = await api.setMemberWeek(id, v); onSet(n) }
+    catch {}
+    setBusy(false)
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12,
+      background: C.card, border: `1px solid ${C.line}`, borderRadius: 12,
+      padding: '12px 15px', marginBottom: 18 }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14.5, fontWeight: 700 }}>On week {idx}</div>
+        <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>
+          What they see on Train. Move it if they've joined late or missed time.
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
+          <button key={n} disabled={busy} onClick={() => go(n)}
+            style={{ width: 32, height: 32, borderRadius: 8, fontSize: 13,
+              fontWeight: 700, cursor: 'pointer', fontFamily: F,
+              background: n === idx ? C.ink : C.card2,
+              border: `1px solid ${n === idx ? C.ink : C.line}`,
+              color: n === idx ? C.card : C.sub }}>{n}</button>
+        ))}
+      </div>
+    </div>
+  )
+}

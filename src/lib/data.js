@@ -62,6 +62,16 @@ export async function getMyProgramme() {
 
 // A week of whichever programme they're on. Only published weeks come
 // back for members — the RLS policy sees to that.
+// Which week a member is on. Stored on the profile rather than
+// inferred, so joining late, taking a fortnight off, or a coach moving
+// someone forward all work — none of which a "first unfinished week"
+// rule handles.
+export async function setMyWeek(idx) {
+  const { data, error } = await supabase.rpc('set_my_week', { p_idx: idx })
+  if (error) throw error
+  return data
+}
+
 export async function getWeek(idx = 1, programmeId = null) {
   let pid = programmeId
   if (!pid) {

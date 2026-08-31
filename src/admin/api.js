@@ -549,3 +549,13 @@ export async function clearWeek(weekId) {
     if (error) throw error
   }
 }
+
+// Move a member to a different week of their block. A coach needs this
+// for someone joining late, coming back from a fortnight off, or
+// repeating a week that didn't land.
+export async function setMemberWeek(userId, idx) {
+  const { data, error } = await supabase.rpc('set_member_week',
+    { p_user: userId, p_idx: idx })
+  if (error) throw error
+  return data
+}

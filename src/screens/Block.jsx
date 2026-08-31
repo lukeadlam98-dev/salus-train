@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { C, T, F } from '../lib/theme'
 import { DAYS, daysUntil } from '../lib/format'
-import { getMyBlock, getWeekSessions } from '../lib/data'
+import { getMyBlock, getWeekSessions, setMyWeek } from '../lib/data'
 import { Card, Label, Back, Ico, I, page } from '../components/ui'
 import { SkeletonList } from '../components/Skeleton'
 
@@ -18,7 +18,8 @@ const KIND = { strength: 'strength', run: 'running', erg: 'ergs',
 // Done weeks show what was actually done rather than what was
 // prescribed. A week where someone managed three of five is a week
 // they trained three times, and pretending otherwise helps nobody.
-export default function Block({ profile, programme, onBack, onOpen }) {
+export default function Block({ profile, programme, onBack, onOpen,
+                                onWeekChange }) {
   const [weeks, setWeeks] = useState([])
   const [open, setOpen] = useState(null)
   const [sessions, setSessions] = useState({})
@@ -40,8 +41,10 @@ export default function Block({ profile, programme, onBack, onOpen }) {
   if (!ready) return <div style={page}><SkeletonList rows={6} /></div>
 
   const days = daysUntil(profile?.race_date)
-  const current = weeks.find(w => w.done < w.sessions && w.published)?.idx
-    ?? weeks.filter(w => w.published).at(-1)?.idx ?? 1
+  // Their week, from the profile. Not inferred from what's finished —
+  // someone who joins in week three or takes a fortnight off isn't
+  // served by a "first unfinished week" rule.
+  const current = profile?.week_idx || 1
 
   const totalDone = weeks.reduce((a, w) => a + Number(w.done), 0)
   const totalSessions = weeks.reduce((a, w) => a + Number(w.sessions), 0)
@@ -149,6 +152,19 @@ export default function Block({ profile, programme, onBack, onOpen }) {
                 </div>
 
                 {/* ---- the week's sessions ---- */}
+                {expanded && !isNow && (
+                  <button onClick={async e => {
+                    e.stopPropagation()
+                    await setMyWeek(w.idx)
+                    onWeekChange?.(w.idx)
+                  }} style={{ width: '100%', marginTop: 13,
+                    background: C.card3, border: 'none', borderRadius: 999,
+                    padding: '12px 0', fontSize: 13.5, fontWeight: 700,
+                    color: C.ink, cursor: 'pointer', fontFamily: F }}>
+                    I'm on week {w.idx}
+                  </button>
+                )}
+
                 {expanded && rows.length > 0 && (
                   <div style={{ marginTop: 14, paddingTop: 4,
                     borderTop: `1px solid ${C.line}` }}>

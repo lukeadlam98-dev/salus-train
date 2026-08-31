@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import { PAL, vars, C, F, T } from './lib/theme'
 import {
-  getProfile, updateProfile, getBenchmarks, getWeek,
+  getProfile, updateProfile, getBenchmarks, getWeek, setMyWeek,
   getHalf, getMultiplier, getMyProgramme, getConfig, getPrediction, getTabs,
 } from './lib/data'
 import { summarise, DEFAULT_MULTIPLIER } from './lib/half'
@@ -111,7 +111,9 @@ export default function App() {
         if (cancelled) return
         setProfile(p); setBenchmarks(b); setMultiplier(m); setProgramme(prog)
         getPrediction(uid).then(setPrediction).catch(() => {})
-        const w = await getWeek(1, prog?.programme_id)
+        // Their week, not week one. This was hardcoded and would
+        // have kept saying week one in November.
+        const w = await getWeek(p?.week_idx || 1, prog?.programme_id)
         if (!cancelled) setWeek(w)
         const h = await getHalf(uid)
         if (!cancelled) setSplits(h.splits)
@@ -202,7 +204,12 @@ export default function App() {
     <Shell>
       <Block profile={profile} programme={programme}
         onBack={() => setPlan(false)}
-        onOpen={s => { setPlan(false); open(s) }} />
+        onOpen={s => { setPlan(false); open(s) }}
+        onWeekChange={async idx => {
+          setProfile(p => ({ ...p, week_idx: idx }))
+          const w = await getWeek(idx, programme?.programme_id)
+          setWeek(w)
+        }} />
     </Shell>
   )
 
