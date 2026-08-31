@@ -57,8 +57,12 @@ export default function Keypad({ label, value, time, onClose, onSave }) {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          {/* onPointerDown rather than onClick: a click on mobile fires
+              about 100ms after the finger lands, which on a number pad
+              reads as the key sticking. Pointer events cover mouse and
+              touch alike. */}
           {['1','2','3','4','5','6','7','8','9', sep, '0', 'del'].map(k => (
-            <button key={k} onClick={() => tap(k)} style={{
+            <button key={k} onPointerDown={e => { e.preventDefault(); tap(k) }} style={{
               height: 54, borderRadius: 12, border: 'none', background: C.card2,
               color: C.ink, fontSize: 22, fontWeight: 700, cursor: 'pointer',
               fontFamily: F,

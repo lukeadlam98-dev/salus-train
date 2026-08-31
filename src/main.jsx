@@ -18,8 +18,24 @@ import './index.css'
 ;['gesturestart', 'gesturechange', 'gestureend'].forEach(evt =>
   document.addEventListener(evt, e => e.preventDefault(), { passive: false }))
 
+// Double-tap zoom, blocked — but only an actual double tap.
+//
+// The first version cancelled any tap within 300ms of the previous
+// one, anywhere on screen. Typing 1-0-8 into the keypad is three taps
+// well inside 300ms, so the second and third were being preventDefault'd
+// and never became clicks. That is what made the number pad feel laggy
+// and half-broken.
+//
+// Anything you can tap is exempt. Entering 11 on the number pad is the
+// same key twice in the same place inside 300ms — indistinguishable
+// from a double tap by time and position alone, so position isn't
+// enough either. Controls never zoom the page anyway, so the check
+// only needs to apply to the space between them.
+const CONTROLS = 'button, a, input, textarea, select, label, [role="button"]'
 let lastTap = 0
+
 document.addEventListener('touchend', e => {
+  if (e.target.closest?.(CONTROLS)) { lastTap = 0; return }
   const now = Date.now()
   if (now - lastTap < 300) e.preventDefault()
   lastTap = now

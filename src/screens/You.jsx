@@ -28,8 +28,16 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
   const [score, setScore] = useState(null)
   const [tab, setTab] = useState('numbers')
 
+  // Keyed on the values, not the object. benchmarks is a new object
+  // on every save, so depending on it directly refetched the score on
+  // every keystroke's worth of state change.
+  const bmKey = BM.map(b => {
+    const v = benchmarks[b.key]
+    return v ? (b.time ? v.value_s : v.value_num) : ''
+  }).join('|')
+
   useEffect(() => { getMyScore(userId).then(setScore).catch(() => {}) },
-    [userId, benchmarks, half?.total])
+    [userId, bmKey, half?.total])
 
   const squat = benchmarks.squat?.value_num
   const bw = benchmarks.bw?.value_num
