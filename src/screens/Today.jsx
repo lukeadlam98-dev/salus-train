@@ -270,3 +270,16 @@ export default function Today({ profile, week, programme, half, onOpen,
     </div>
   )
 }
+
+const Chip = ({ icon, label, onClick, disabled }) => (
+  <button onClick={disabled ? undefined : onClick} disabled={disabled}
+    style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 7,
+      background: C.card, border: `1px solid ${C.line}`, borderRadius: 999,
+      padding: '10px 14px', fontSize: 13, fontWeight: 600,
+      color: disabled ? C.mute : C.ink, opacity: disabled ? .5 : 1,
+      cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit',
+      whiteSpace: 'nowrap' }}>
+    <Ico d={icon} s={15} c={disabled ? C.mute : C.sub} w={1.9} />
+    {label}
+  </button>
+)
