@@ -1,10 +1,23 @@
 import { useState } from 'react'
 import { C, F } from '../lib/theme'
+import { fmt, toSecs } from '../lib/format'
 import { Ico, I } from './ui'
 
 // Custom numeric pad. The system keyboard never opens mid-set.
+//
+// It takes and returns the same shape the database holds: seconds as an
+// integer for a time, a number for anything else. It used to hand back
+// the raw string — so "4:02" went into an integer column and every
+// time-based benchmark silently failed to save, while the row still
+// existed and counted as done.
+//
+// Converting here rather than at each call site means the next screen
+// that uses a keypad can't reintroduce it.
 export default function Keypad({ label, value, time, onClose, onSave }) {
-  const [v, setV] = useState(String(value ?? ''))
+  const [v, setV] = useState(
+    value == null || value === '' ? ''
+      : time ? fmt(value)              // seconds in, m:ss on screen
+      : String(value))
   const sep = time ? ':' : '.'
 
   const tap = k => {
@@ -33,7 +46,8 @@ export default function Keypad({ label, value, time, onClose, onSave }) {
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: C.sub }}>{label}</div>
           <div style={{ flex: 1 }} />
-          <button onClick={() => onSave(v)} style={{
+          <button onClick={() => onSave(time ? toSecs(v) : (v === '' ? null : Number(v)))}
+            style={{
             width: 48, height: 48, borderRadius: 999, border: `1.5px solid ${C.line}`,
             background: 'transparent', display: 'grid', placeItems: 'center',
             cursor: 'pointer',
