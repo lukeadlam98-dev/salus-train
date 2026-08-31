@@ -17,24 +17,32 @@
 // Warmth is in the values themselves rather than in a tint: the
 // ground is a brown-black, the top end is bone. Neither is neutral
 // grey, which would look like a wireframe.
+// Monochrome, on a wider ladder than before.
+//
+// The previous values sat inside about fifteen points of each other,
+// which meant a card, a row inside it and a chip on that row all read
+// as one surface. Layering only works if each step is visible — so the
+// gaps are bigger now, and card2 in particular has come up enough that
+// a block row inside a session card is obviously a thing sitting on
+// another thing.
+//
+// Warmth is in the values themselves, not a tint: the ground is a
+// brown-black, the top end is bone. Neutral grey would read as a
+// wireframe.
 export const PAL = {
-  bg:    '#0A0A09',   // the ground, warm near-black
-  card:  '#141312',   // surfaces
-  card2: '#1D1C1A',   // inputs, fills
-  card3: '#2A2926',   // chips, pressed
-  line:  '#262523',   // hairlines
-  mute:  '#5E5B56',   // timestamps, inactive
-  sub:   '#8E8A83',   // secondary
-  ink:   '#EDE9E2',   // body
+  bg:    '#090908',   // the ground, warm near-black
+  card:  '#161514',   // a card on it
+  card2: '#232120',   // a row inside a card  — was #1D1C1A
+  card3: '#302D2A',   // a chip on that row   — was #2A2926
+  line:  '#332F2C',   // hairlines, now actually visible
+  mute:  '#66625C',
+  sub:   '#948F87',
+  ink:   '#EDE9E2',
   g:     '#FFFCF6',   // the accent — brightest, used as a fill
-  gDeep: '#232120',   // its dark counterpart, for logged states
+  gDeep: '#2A2725',
   gLine: 'rgba(255,252,246,.42)',
-
-  // The single exception. Delete is the only place where getting it
-  // wrong is unrecoverable, and it's worth breaking the system for.
   red:   '#C4685A',
-
-  sheet: '#161514',
+  sheet: '#1B1918',
   gold:  '#FFFCF6', silver: '#B4AFA7', bronze: '#7A756E',
   shadow: 'none',
   markFilter: 'none',

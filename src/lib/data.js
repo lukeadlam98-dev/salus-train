@@ -514,3 +514,34 @@ export async function getRaceCatalog({ series, region } = {}) {
   if (error) return []
   return data || []
 }
+
+/* ---------------- club chat ---------------- */
+export async function getChat(limit = 60) {
+  const { data, error } = await supabase.from('chat_feed')
+    .select('*').order('created_at', { ascending: false }).limit(limit)
+  if (error) return []
+  return (data || []).reverse()          // oldest first, like a chat
+}
+
+// Named apart from sendMessage, which is the coach DM. Two things
+// called the same is how you end up sending a private question to
+// the whole room.
+export async function postToRoom(userId, body, photo_url = null) {
+  const { data, error } = await supabase.from('chat_messages')
+    .insert({ user_id: userId, body, photo_url }).select().single()
+  if (error) throw error
+  return data
+}
+
+export const removeMessage = id =>
+  supabase.from('chat_messages').update({ deleted: true }).eq('id', id)
+
+// A message arriving while someone is looking at the room.
+export function onNewMessage(fn) {
+  const ch = supabase.channel('club-chat')
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+      () => fn())
+    .subscribe()
+  return () => supabase.removeChannel(ch)
+}

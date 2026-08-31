@@ -72,3 +72,60 @@ button { transition: transform .12s ease, background .18s ease, opacity .18s eas
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001s !important; transition-duration: .001s !important }
 }
+
+/* ---------------------------------------------------------------
+   No zoom, no bounce, no accidental selection.
+
+   The viewport meta stops pinch-zoom on most browsers. iOS Safari
+   ignores it in some versions, so touch-action does the same job at
+   the CSS level — belt and braces, because a member mid-set who
+   pinches by accident and can't get back is a real problem.
+
+   overscroll-behavior stops the rubber-band bounce that makes a web
+   app feel like a web page.
+   --------------------------------------------------------------- */
+
+html, body {
+  touch-action: pan-y;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Double-tap to zoom is a separate gesture from pinch. This kills it
+   on anything tappable, which is where it actually gets triggered. */
+button, [role="button"], a, label {
+  touch-action: manipulation;
+}
+
+/* Long-press to select is never wanted on a control, and on iOS it
+   brings up a callout menu mid-session. Text you'd want to copy — a
+   coach's note, a notice — is exempt. */
+button, [role="button"], .nb, svg {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Inputs must stay selectable, and must not trigger the iOS zoom-on-
+   focus. Safari zooms any input under 16px, which is why every field
+   in this app is 15px or larger and the ones that aren't get bumped
+   here rather than in the component. */
+input, textarea, select {
+  -webkit-user-select: text;
+  user-select: text;
+  font-size: max(16px, 1em);
+}

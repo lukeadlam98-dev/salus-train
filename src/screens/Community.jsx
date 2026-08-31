@@ -1,282 +1,265 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { C, T, F } from '../lib/theme'
-import { fmt } from '../lib/format'
-import { getFeed, getClubWeek, getNotices, getCoaches, getPosts,
-         toggleKudos } from '../lib/data'
-import { Card, Label, Btn, Avatar, Sheet, Ico, I, page } from '../components/ui'
-import { SkeletonList } from '../components/Skeleton'
-import Empty from '../components/Empty'
+import { supabase } from '../lib/supabase'
+import { getChat, postToRoom, removeMessage, onNewMessage,
+         getNotices } from '../lib/data'
+import { Avatar, Ico, I, Sheet, Btn } from '../components/ui'
 
-const ago = d => {
-  if (!d) return ''
-  const mins = Math.floor((Date.now() - new Date(d)) / 60000)
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  const days = Math.floor(hrs / 24)
-  return days === 1 ? 'yesterday' : `${days}d ago`
+const when = d => {
+  const t = new Date(d)
+  const mins = Math.floor((Date.now() - t) / 60000)
+  if (mins < 1) return 'now'
+  if (mins < 60) return `${mins}m`
+  return t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
 
-// The room, digitally.
+const sameDay = (a, b) =>
+  new Date(a).toDateString() === new Date(b).toDateString()
+
+const dayLabel = d => {
+  const t = new Date(d), now = new Date()
+  const diff = Math.floor((now - t) / 86400000)
+  if (sameDay(d, now)) return 'Today'
+  if (diff < 2) return 'Yesterday'
+  return t.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric',
+    month: 'short' })
+}
+
+// One room, everyone in it.
 //
-// Training alone at six in the morning is the problem this solves:
-// nothing here is a weight or a time, only that somebody else was
-// in doing the same work. That's the thing a printed plan can't do.
-export default function Community({ profile, userId, onCoach, onShare }) {
-  const [feed, setFeed] = useState([])
-  const [week, setWeek] = useState(null)
+// The WhatsApp group already exists and works. The only reason to have
+// this instead is that it sits next to the training — a question about
+// Monday's loads is asked in the same place Monday's loads live.
+//
+// Notices are pinned above it and kept deliberately small. They're the
+// things that need to still be true tomorrow; the chat is everything
+// else, and it should look like everything else.
+export default function Community({ profile, userId }) {
+  const [msgs, setMsgs] = useState([])
   const [notices, setNotices] = useState([])
-  const [coaches, setCoaches] = useState([])
-  const [notice, setNotice] = useState(null)
-  const [posts, setPosts] = useState([])
+  const [text, setText] = useState('')
   const [ready, setReady] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [open, setOpen] = useState(null)
+  const [notice, setNotice] = useState(null)
+  const bottom = useRef(null)
+  const scroller = useRef(null)
+
+  const load = () => getChat().then(setMsgs)
 
   useEffect(() => {
-    Promise.all([
-      getFeed().then(setFeed).catch(() => {}),
-      getClubWeek().then(setWeek).catch(() => {}),
-      getNotices().then(setNotices).catch(() => {}),
-      getCoaches().then(setCoaches).catch(() => {}),
-      getPosts().then(setPosts).catch(() => {}),
-    ]).finally(() => setReady(true))
+    Promise.all([load(), getNotices().then(setNotices).catch(() => {})])
+      .finally(() => setReady(true))
+    return onNewMessage(load)
   }, [])
 
-  // Optimistic. A kudos that waits for a round trip before it fills
-  // feels broken, and the failure case is trivial.
-  async function kudos(p) {
-    const on = !p.mine
-    setPosts(ps => ps.map(x => x.id === p.id
-      ? { ...x, mine: on, kudos: Number(x.kudos) + (on ? 1 : -1) } : x))
-    try { await toggleKudos(p.id, userId, on) }
-    catch { getPosts().then(setPosts).catch(() => {}) }
+  // Stay pinned to the bottom, the way a chat should.
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: msgs.length ? 'smooth' : 'auto' })
+  }, [msgs.length])
+
+  async function send() {
+    const body = text.trim()
+    if (!body || busy) return
+    setBusy(true)
+    setText('')
+    // Optimistic: the message appears the moment it's sent, because a
+    // chat that waits for a round trip feels broken even when it isn't.
+    const temp = {
+      id: `temp-${Date.now()}`, user_id: userId, name: profile?.name,
+      body, created_at: new Date().toISOString(), mine: true, pending: true,
+    }
+    setMsgs(m => [...m, temp])
+    try { await postToRoom(userId, body); await load() }
+    catch { setMsgs(m => m.filter(x => x.id !== temp.id)); setText(body) }
+    setBusy(false)
   }
 
-  if (!ready) return <SkeletonList rows={6} />
-
-  const hrs = Math.floor((week?.minutes || 0) / 60)
+  const pinned = notices.filter(n => n.pinned)
 
   return (
-    <div style={page}>
-      <h1 style={T.h1}>Community</h1>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
 
-      {/* ---- the club, this week ---- */}
-      {week?.sessions > 0 && (
-        <Card style={{ marginTop: 18 }}>
-          <Label>THE CLUB THIS WEEK</Label>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8,
-            marginTop: 7 }}>
-            <div style={{ ...T.display, fontSize: 38 }}>{week.sessions}</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.sub }}>
-              session{week.sessions === 1 ? '' : 's'}
-            </div>
+      {/* ---- pinned, small ---- */}
+      <div style={{ padding: '46px 16px 0', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+          <h1 style={{ ...T.h1, fontSize: 22 }}>The room</h1>
+          <div style={{ fontSize: 12.5, color: C.mute }}>
+            everyone at Salus
           </div>
-          <div style={{ ...T.small, marginTop: 7 }}>
-            {week.people} {week.people === 1 ? 'person' : 'people'} in,
-            {hrs > 0 ? ` ${hrs} hours` : ` ${week.minutes} minutes`} on the floor
-            between you.
-          </div>
-        </Card>
-      )}
-
-      {/* ---- the board ---- */}
-      {notices.length > 0 && (
-        <>
-          <Label style={{ margin: '26px 0 12px' }}>WHAT'S ON AT SALUS</Label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            {notices.map(n => (
-              <div key={n.id} onClick={() => setNotice(n)}
-                style={{ position: 'relative', background: C.card,
-                  border: `1px solid ${n.pinned ? C.gLine : 'transparent'}`,
-                  borderRadius: 14, padding: '17px 15px 15px', cursor: 'pointer' }}>
-                {n.pinned && (
-                  <div style={{ position: 'absolute', top: -8, right: 14,
-                    width: 22, height: 22, borderRadius: 999, background: C.g,
-                    display: 'grid', placeItems: 'center' }}>
-                    <Ico d={I.pin} s={11} c={C.bg} w={2.2} />
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9,
-                  paddingRight: n.pinned ? 26 : 0 }}>
-                  <span style={{ fontSize: 9.5, fontWeight: 800,
-                    letterSpacing: '.13em',
-                    color: n.pinned ? C.g : C.mute }}>{n.tag}</span>
-                  <div style={{ flex: 1 }} />
-                  <span style={{ fontSize: 10.5, color: C.mute }}>
-                    {new Date(n.published_at).toLocaleDateString('en-GB',
-                      { day: 'numeric', month: 'short' })}
-                  </span>
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 700, marginTop: 7,
-                  letterSpacing: '-.02em', lineHeight: 1.3 }}>{n.title}</div>
-                {n.body && (
-                  <div style={{ ...T.small, marginTop: 5, display: '-webkit-box',
-                    WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden' }}>{n.body}</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* ---- who's been in ---- */}
-      <Label style={{ margin: '26px 0 12px' }}>WHO'S BEEN IN</Label>
-
-      {!profile?.share_on_leaderboard && (
-        <Card style={{ background: C.card2, marginBottom: 12 }}>
-          <div style={{ ...T.small }}>
-            You're not showing up here. Sharing puts your name in the feed when
-            you train — no weights, no times, just that you were in.
-          </div>
-          <Btn tone="soft" style={{ marginTop: 13, padding: '13px 0',
-            fontSize: 14.5 }} onClick={onShare}>Join in</Btn>
-        </Card>
-      )}
-
-      {posts.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 11,
-          marginBottom: 14 }}>
-          {posts.map(p => {
-            const me = p.user_id === userId
-            return (
-              <div key={p.id} style={{ background: C.card, borderRadius: 16,
-                overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 11,
-                  padding: '14px 15px 12px' }}>
-                  <Avatar name={p.name} size={34} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14.5, fontWeight: 700,
-                      color: me ? C.g : C.ink }}>{me ? 'You' : p.name}</div>
-                    <div style={{ fontSize: 12, color: C.mute, marginTop: 2,
-                      overflow: 'hidden', textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap' }}>
-                      {p.session_title || 'A session'}
-                      {p.elapsed_s ? ` · ${fmt(p.elapsed_s)}` : ''}
-                      {p.distance_m ? ` · ${(p.distance_m / 1000).toFixed(1)}km` : ''}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 11.5, color: C.mute }}>
-                    {ago(p.created_at)}
-                  </div>
-                </div>
-
-                {p.body && (
-                  <div style={{ padding: '0 15px 13px', fontSize: 14.5,
-                    lineHeight: 1.5, color: C.ink }}>{p.body}</div>
-                )}
-
-                {p.photo_url && (
-                  <div style={{ height: 210,
-                    background: `#0A0A09 url(${p.photo_url}) center/cover` }} />
-                )}
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '11px 15px', borderTop: `1px solid ${C.line}` }}>
-                  <button onClick={() => kudos(p)} style={{ display: 'flex',
-                    alignItems: 'center', gap: 8, background: 'transparent',
-                    border: 'none', cursor: 'pointer', fontFamily: F, padding: 0 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 999,
-                      display: 'grid', placeItems: 'center',
-                      background: p.mine ? C.g : C.card2,
-                      animation: p.mine ? 'pop .26s cubic-bezier(.2,.8,.3,1)' : 'none' }}>
-                      <Ico d={I.kudos} s={15} c={p.mine ? C.bg : C.sub} w={1.9} />
-                    </div>
-                    <span style={{ fontSize: 13.5, fontWeight: 600,
-                      color: p.mine ? C.ink : C.sub }}>
-                      {Number(p.kudos) || ''}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            )
-          })}
         </div>
-      )}
 
-      {feed.length === 0 && posts.length === 0 ? (
-        <Empty icon={I.user}
-          title="Quiet in here"
-          body="When members finish a session it shows up here. Be the first one in this week." />
-      ) : (
-        <Card style={{ padding: '4px 15px' }} className="stagger">
-          {feed.map((f, i) => {
-            const me = f.name === profile?.name
-            return (
-              <div key={f.id} style={{ display: 'flex', alignItems: 'center',
-                gap: 12, padding: '13px 0',
-                borderTop: i ? `1px solid ${C.line}` : 'none' }}>
-                <Avatar name={f.name} size={34} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 700,
-                    color: me ? C.g : C.ink }}>
-                    {me ? 'You' : f.name}
-                  </div>
-                  <div style={{ fontSize: 12.5, color: C.sub, marginTop: 2,
-                    overflow: 'hidden', textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap' }}>
-                    {f.session_title || 'a session'}
-                    {f.week_idx ? ` · week ${f.week_idx}` : ''}
-                  </div>
-                </div>
-                <div style={{ fontSize: 11.5, color: C.mute, flexShrink: 0 }}>
-                  {ago(f.ended_at)}
-                </div>
-              </div>
-            )
-          })}
-        </Card>
-      )}
-
-      {/* ---- the coaches ---- */}
-      {coaches.length > 0 && (
-        <>
-          <Label style={{ margin: '26px 0 12px' }}>THE COACHES</Label>
-          <div className="nb" style={{ display: 'flex', gap: 10,
-            overflowX: 'auto', paddingBottom: 4, marginLeft: -16, marginRight: -16,
-            paddingLeft: 16, paddingRight: 16 }}>
-            {coaches.map(c => (
-              <button key={c.id} onClick={() => onCoach(c)}
-                style={{ flex: '0 0 auto', width: 108, background: C.card,
-                  border: 'none', borderRadius: 15, padding: '16px 12px',
-                  cursor: 'pointer', fontFamily: F, textAlign: 'center' }}>
-                {c.photo_url ? (
-                  <div style={{ width: 52, height: 52, borderRadius: 999,
-                    margin: '0 auto',
-                    background: `#0A0A09 url(${c.photo_url}) center/cover` }} />
-                ) : (
-                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <Avatar name={c.name} tint={c.tint} size={52} />
-                  </div>
-                )}
-                <div style={{ fontSize: 14, fontWeight: 700, marginTop: 10,
-                  color: C.ink }}>{c.name}</div>
-                <div style={{ fontSize: 11, color: C.mute, marginTop: 3,
+        {pinned.length > 0 && (
+          <div className="nb" style={{ display: 'flex', gap: 8, marginTop: 12,
+            overflowX: 'auto', paddingBottom: 2,
+            marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16 }}>
+            {pinned.map(n => (
+              <button key={n.id} onClick={() => setNotice(n)}
+                style={{ flex: '0 0 auto', maxWidth: 250, display: 'flex',
+                  alignItems: 'center', gap: 8, background: C.card,
+                  border: `1px solid ${C.gLine}`, borderRadius: 999,
+                  padding: '8px 14px', cursor: 'pointer', fontFamily: F }}>
+                <Ico d={I.pin} s={11} c={C.g} w={2.2} />
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: C.ink,
                   overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap' }}>
-                  {(c.spec || [])[0] || 'Coach'}
-                </div>
+                  whiteSpace: 'nowrap' }}>{n.title}</span>
               </button>
             ))}
           </div>
-          <div style={{ ...T.small, fontSize: 12, marginTop: 12 }}>
-            Tap any of them to ask something. Private, and they'll usually get
-            back to you the same day.
+        )}
+      </div>
+
+      {/* ---- the room ---- */}
+      <div ref={scroller} className="nb" style={{ flex: 1, overflowY: 'auto',
+        padding: '16px 16px 8px' }}>
+        {!ready && (
+          <div style={{ ...T.body, textAlign: 'center', padding: '30px 0' }}>
+            …
           </div>
-        </>
+        )}
+
+        {ready && msgs.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+            <div style={{ ...T.h3, fontSize: 16 }}>Nothing said yet</div>
+            <div style={{ ...T.small, marginTop: 8, maxWidth: 260,
+              margin: '8px auto 0' }}>
+              Ask about a load, sort a lift share to ExCeL, or say how this
+              morning went.
+            </div>
+          </div>
+        )}
+
+        {msgs.map((m, i) => {
+          const prev = msgs[i - 1]
+          const newDay = !prev || !sameDay(prev.created_at, m.created_at)
+          // Group consecutive messages from the same person within a few
+          // minutes — the name and avatar only need saying once.
+          const grouped = prev && !newDay && prev.user_id === m.user_id &&
+            (new Date(m.created_at) - new Date(prev.created_at)) < 5 * 60000
+
+          return (
+            <div key={m.id}>
+              {newDay && (
+                <div style={{ textAlign: 'center', margin: '18px 0 14px' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: C.mute,
+                    background: C.card, borderRadius: 999,
+                    padding: '5px 12px' }}>{dayLabel(m.created_at)}</span>
+                </div>
+              )}
+
+              <div onClick={() => (m.mine || profile?.role === 'admin') &&
+                  !m.deleted && setOpen(m)}
+                style={{ display: 'flex', gap: 10,
+                  marginTop: grouped ? 3 : 12,
+                  flexDirection: m.mine ? 'row-reverse' : 'row',
+                  cursor: m.mine ? 'pointer' : 'default' }}>
+
+                <div style={{ width: 30, flexShrink: 0 }}>
+                  {!grouped && !m.mine && (
+                    <Avatar name={m.name || '?'} size={30} />
+                  )}
+                </div>
+
+                <div style={{ maxWidth: '76%', minWidth: 0 }}>
+                  {!grouped && !m.mine && (
+                    <div style={{ display: 'flex', alignItems: 'baseline',
+                      gap: 7, marginBottom: 4, paddingLeft: 2 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700,
+                        color: m.is_coach ? C.g : C.sub }}>{m.name}</span>
+                      {m.is_coach && (
+                        <span style={{ fontSize: 9, fontWeight: 800,
+                          letterSpacing: '.1em', color: C.mute }}>COACH</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{
+                    background: m.mine ? C.g : C.card2,
+                    color: m.mine ? C.bg : C.ink,
+                    borderRadius: 16,
+                    borderBottomRightRadius: m.mine && !grouped ? 5 : 16,
+                    borderBottomLeftRadius: !m.mine && !grouped ? 5 : 16,
+                    padding: '11px 14px', fontSize: 15, lineHeight: 1.45,
+                    opacity: m.pending ? .55 : 1,
+                    wordBreak: 'break-word',
+                  }}>
+                    {m.deleted
+                      ? <span style={{ fontStyle: 'italic', opacity: .6 }}>
+                          Message removed</span>
+                      : m.body}
+                  </div>
+
+                  <div style={{ fontSize: 10.5, color: C.mute, marginTop: 3,
+                    textAlign: m.mine ? 'right' : 'left', paddingLeft: 3,
+                    paddingRight: 3 }}>
+                    {m.pending ? 'sending' : when(m.created_at)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        <div ref={bottom} />
+      </div>
+
+      {/* ---- send ---- */}
+      <div style={{ flexShrink: 0, padding: '8px 14px',
+        paddingBottom: 'calc(84px + env(safe-area-inset-bottom))' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 9,
+          background: C.card, border: `1px solid ${C.line}`, borderRadius: 24,
+          padding: '6px 6px 6px 16px' }}>
+          <textarea value={text} rows={1}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+            }}
+            placeholder="Say something"
+            style={{ flex: 1, background: 'transparent', border: 'none',
+              color: C.ink, fontSize: 15.5, outline: 'none', fontFamily: F,
+              resize: 'none', lineHeight: 1.4, padding: '10px 0',
+              maxHeight: 110 }} />
+          <button onClick={send} disabled={!text.trim() || busy}
+            style={{ width: 38, height: 38, borderRadius: 999, border: 'none',
+              flexShrink: 0, cursor: text.trim() ? 'pointer' : 'default',
+              background: text.trim() ? C.g : C.card2,
+              display: 'grid', placeItems: 'center', transition: 'background .2s' }}>
+            <Ico d={I.send} s={16} c={text.trim() ? C.bg : C.mute} w={2} />
+          </button>
+        </div>
+      </div>
+
+      {/* ---- a message you can remove ---- */}
+      {open && (
+        <Sheet onClose={() => setOpen(null)}>
+          <div style={{ ...T.small, marginBottom: 16 }}>
+            {open.mine ? 'Your message' : `${open.name}'s message`}
+          </div>
+          <div style={{ background: C.card2, borderRadius: 14, padding: 14,
+            fontSize: 15, lineHeight: 1.45 }}>{open.body}</div>
+          <Btn tone="line" style={{ marginTop: 18, color: C.red }}
+            onClick={async () => {
+              await removeMessage(open.id); setOpen(null); load()
+            }}>Remove it</Btn>
+          <button onClick={() => setOpen(null)} style={{ width: '100%',
+            background: 'transparent', border: 'none', color: C.sub,
+            fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: F,
+            padding: '15px 0 0' }}>Cancel</button>
+        </Sheet>
       )}
 
       {notice && (
         <Sheet onClose={() => setNotice(null)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <Ico d={I.pin} s={12} c={C.g} w={2.2} />
             <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.12em',
-              color: notice.pinned ? C.g : C.mute }}>{notice.tag}</span>
+              color: C.g }}>{notice.tag}</span>
             <div style={{ flex: 1 }} />
             <span style={{ fontSize: 12.5, color: C.mute }}>
               {new Date(notice.published_at).toLocaleDateString('en-GB',
                 { day: 'numeric', month: 'short' })}
             </span>
           </div>
-          <div style={{ ...T.h2, marginTop: 9 }}>{notice.title}</div>
+          <div style={{ ...T.h2, marginTop: 11 }}>{notice.title}</div>
           <div style={{ ...T.body, marginTop: 11 }}>{notice.body}</div>
           <Btn tone="soft" style={{ marginTop: 20 }}
             onClick={() => setNotice(null)}>Close</Btn>

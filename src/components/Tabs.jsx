@@ -41,9 +41,25 @@ export default function Tabs({ tab, setTab, items }) {
       position: 'fixed', left: 14, right: 14,
       bottom: 'calc(13px + env(safe-area-inset-bottom))',
       maxWidth: 492, margin: '0 auto',
-      background: C.sheet, border: `1px solid ${C.line}`, borderRadius: 999,
-      padding: 5, display: 'grid', gridTemplateColumns: `repeat(${(items?.length || 4)},1fr)`,
-      zIndex: 60, boxShadow: C.shadow,
+      // Glass, as close as a web app gets.
+      //
+      // iOS 26's Liquid Glass does real refraction — the content behind
+      // it bends. backdrop-filter can only blur and shift colour, so the
+      // convincing part has to come from the edges: a bright inner line
+      // along the top where light would catch, a darker one along the
+      // bottom, and a shadow underneath so the bar sits above the page
+      // rather than on it.
+      background: 'linear-gradient(160deg,rgba(255,252,246,.10),rgba(255,252,246,.04))',
+      backdropFilter: 'blur(28px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+      border: '1px solid rgba(255,252,246,.12)',
+      boxShadow: 'inset 0 1px 0 rgba(255,252,246,.20),' +
+                 'inset 0 -1px 0 rgba(0,0,0,.35),' +
+                 '0 8px 32px rgba(0,0,0,.55)',
+      borderRadius: 999,
+      padding: 5, display: 'grid',
+      gridTemplateColumns: `repeat(${(items?.length || 4)},1fr)`,
+      zIndex: 60,
     }}>
       {rows.map(([k, label, d]) => {
         const on = tab === k

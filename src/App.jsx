@@ -256,9 +256,8 @@ export default function App() {
                               onPlan={() => setPlan(true)}
                               prediction={prediction} />}
 
-      {tab === 'community' && <Community profile={profile} userId={session.user.id}
-                              onCoach={() => setCoaches(true)}
-                              onShare={() => patch({ share_on_leaderboard: true })} />}
+      {tab === 'community' && <Community profile={profile}
+                              userId={session.user.id} />}
       {tab === 'leaderboard' && <Board profile={profile} userId={session.user.id}
                               onShare={() => patch({ share_on_leaderboard: true })} />}
 
