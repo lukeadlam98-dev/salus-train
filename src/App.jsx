@@ -269,8 +269,12 @@ export default function App() {
       {/* The nudge sits above the tabs and disappears once the five
           tests are in. Not dismissible on purpose: a member who skips
           them gets a block full of defaults and never finds out. */}
-      <Setup benchmarks={benchmarks} half={half}
-        onGoToTests={() => setTab('me')} />
+      {/* Not on Community — the send box lives where this sits, and a
+          nudge covering the text field is worse than no nudge. */}
+      {tab !== 'community' && (
+        <Setup benchmarks={benchmarks} half={half}
+          onGoToTests={() => setTab('me')} />
+      )}
       <Tabs tab={tab} setTab={setTab} items={tabItems} />
     </Shell>
   )

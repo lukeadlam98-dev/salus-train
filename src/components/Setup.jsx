@@ -67,14 +67,11 @@ export default function Setup({ benchmarks = {}, half, onGoToTests }) {
       <button onClick={() => setOpen(true)} style={{
         position: 'fixed', left: 14, right: 14,
         bottom: 'calc(82px + env(safe-area-inset-bottom))', zIndex: 40,
-        background: 'linear-gradient(160deg,rgba(255,252,246,.10),rgba(255,252,246,.04))',
-        backdropFilter: 'blur(28px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-        border: '1px solid rgba(255,252,246,.12)', borderRadius: 999,
+        background: C.sheet, border: `1px solid ${C.line}`, borderRadius: 999,
         padding: '11px 14px 11px 18px', display: 'flex', alignItems: 'center',
         gap: 12, cursor: 'pointer', fontFamily: F, maxWidth: 492,
         margin: '0 auto',
-        boxShadow: 'inset 0 1px 0 rgba(255,252,246,.18), 0 8px 30px rgba(0,0,0,.5)',
+        boxShadow: '0 8px 30px rgba(0,0,0,.5)',
         animation: 'up .35s ease',
       }}>
         <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>

@@ -78,7 +78,11 @@ export default function Community({ profile, userId }) {
   const pinned = notices.filter(n => n.pinned)
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    // Fixed rather than flowing, so the composer stays put when the
+    // keyboard opens and the list scrolls underneath it. 100dvh follows
+    // the visible viewport on iOS, which 100vh does not.
+    <div style={{ position: 'fixed', inset: 0, display: 'flex',
+      flexDirection: 'column', background: C.bg }}>
 
       {/* ---- pinned, small ---- */}
       <div style={{ padding: '46px 16px 0', flexShrink: 0 }}>
@@ -204,7 +208,8 @@ export default function Community({ profile, userId }) {
 
       {/* ---- send ---- */}
       <div style={{ flexShrink: 0, padding: '8px 14px',
-        paddingBottom: 'calc(84px + env(safe-area-inset-bottom))' }}>
+        paddingBottom: 'calc(90px + env(safe-area-inset-bottom))',
+        background: C.bg }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 9,
           background: C.card, border: `1px solid ${C.line}`, borderRadius: 24,
           padding: '6px 6px 6px 16px' }}>

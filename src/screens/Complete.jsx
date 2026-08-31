@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { C, T } from '../lib/theme'
 import { fmt } from '../lib/format'
 import { Card, Label, Btn, page } from '../components/ui'
-import Post from './Post'
+import ShareToRoom from './ShareToRoom'
 import { EFFORT } from './Effort'
 
 export default function Complete({ userId, profile, workout, session, result, effort, onDone }) {
@@ -109,7 +109,7 @@ export default function Complete({ userId, profile, workout, session, result, ef
         marginTop: 18, background: C.card, border: `1px solid ${C.line}`,
         borderRadius: 999, padding: '16px 0', fontSize: 15.5, fontWeight: 700,
         color: C.ink, cursor: 'pointer', fontFamily: 'inherit' }}>
-        Say something about it
+        Tell the room
       </button>
 
       <button onClick={onDone} style={{ width: '100%', background: 'transparent',
@@ -119,7 +119,8 @@ export default function Complete({ userId, profile, workout, session, result, ef
       </button>
 
       {posting && (
-        <Post userId={userId} profile={profile} workout={workout}
+        <ShareToRoom userId={userId} profile={profile} workout={workout}
+          session={session} result={result} effort={effort}
           onClose={() => setPosting(false)}
           onPosted={() => { setPosting(false); onDone() }} />
       )}
