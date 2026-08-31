@@ -1,4 +1,4 @@
-import { C, F, T, P, card } from '../lib/theme'
+import { C, F, T, P, card, FLOAT } from '../lib/theme'
 import { LOGO } from '../lib/photos'
 
 export const Card = ({ children, style, onClick, className }) => (
@@ -218,5 +218,6 @@ export const Mark = ({ s = 30, onPhoto, src, c }) => {
 // above it. The nudge disappears once testing is done, so the extra
 // room is briefly unused — better than content hiding behind it.
 export const page = {
-  minHeight: '100%', padding: '46px 16px 150px', maxWidth: 520, margin: '0 auto',
+  minHeight: '100%', maxWidth: 520, margin: '0 auto',
+  padding: '46px 16px', paddingBottom: FLOAT.clear,
 }

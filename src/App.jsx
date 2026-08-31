@@ -265,7 +265,8 @@ export default function App() {
                               benchmarks={benchmarks} setBenchmarks={setBenchmarks}
                               half={half} onUpdate={patch}
                               onCoaches={() => setCoaches(true)}
-                              onRaces={() => setRaces(true)} />}
+                              onRaces={() => setRaces(true)}
+                              onProgress={() => setProgress(true)} />}
       {/* The nudge sits above the tabs and disappears once the five
           tests are in. Not dismissible on purpose: a member who skips
           them gets a block full of defaults and never finds out. */}

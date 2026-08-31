@@ -1,4 +1,4 @@
-import { C } from '../lib/theme'
+import { C, FLOAT } from '../lib/theme'
 
 // Loading shapes that match what's coming, rather than the word
 // "Loading". On gym wifi the wait is a real part of the experience,
@@ -13,7 +13,7 @@ const Shimmer = ({ w = '100%', h = 14, r = 7, style }) => (
 )
 
 export const SkeletonToday = () => (
-  <div style={{ padding: '46px 16px 150px', maxWidth: 520, margin: '0 auto' }}>
+  <div style={{ padding: '46px 16px', paddingBottom: FLOAT.clear, maxWidth: 520, margin: '0 auto' }}>
     <div style={{ display: 'flex', alignItems: 'center' }}>
       <div>
         <Shimmer w={168} h={22} />
@@ -39,7 +39,7 @@ export const SkeletonToday = () => (
 )
 
 export const SkeletonList = ({ rows = 5, header = true }) => (
-  <div style={{ padding: '46px 16px 150px', maxWidth: 520, margin: '0 auto' }}>
+  <div style={{ padding: '46px 16px', paddingBottom: FLOAT.clear, maxWidth: 520, margin: '0 auto' }}>
     {header && (
       <>
         <Shimmer w={148} h={22} />

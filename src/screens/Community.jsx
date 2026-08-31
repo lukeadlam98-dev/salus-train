@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { C, T, F } from '../lib/theme'
+import { C, T, F, FLOAT } from '../lib/theme'
 import { supabase } from '../lib/supabase'
 import { getChat, postToRoom, removeMessage, onNewMessage,
          getNotices } from '../lib/data'
@@ -115,7 +115,8 @@ export default function Community({ profile, userId }) {
 
       {/* ---- the room ---- */}
       <div ref={scroller} className="nb" style={{ flex: 1, overflowY: 'auto',
-        padding: '16px 16px 8px' }}>
+        padding: '16px 16px 0',
+        paddingBottom: 'calc(146px + env(safe-area-inset-bottom))' }}>
         {!ready && (
           <div style={{ ...T.body, textAlign: 'center', padding: '30px 0' }}>
             …
@@ -207,12 +208,15 @@ export default function Community({ profile, userId }) {
       </div>
 
       {/* ---- send ---- */}
-      <div style={{ flexShrink: 0, padding: '8px 14px',
-        paddingBottom: 'calc(90px + env(safe-area-inset-bottom))',
-        background: C.bg }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 9,
-          background: C.card, border: `1px solid ${C.line}`, borderRadius: 24,
-          padding: '6px 6px 6px 16px' }}>
+      {/* Same size and the same distance from the tab bar as the
+          testing nudge, which sits in this exact spot on every other
+          screen. Two floating bars an inch apart looked accidental. */}
+      <div style={{ position: 'fixed', left: 14, right: 14,
+        bottom: FLOAT.above, maxWidth: 492, margin: '0 auto', zIndex: 40 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9,
+          background: C.sheet, border: `1px solid ${C.line}`, borderRadius: 999,
+          padding: '10px 10px 10px 18px',
+          boxShadow: '0 8px 30px rgba(0,0,0,.5)' }}>
           <textarea value={text} rows={1}
             onChange={e => setText(e.target.value)}
             onKeyDown={e => {
@@ -220,9 +224,9 @@ export default function Community({ profile, userId }) {
             }}
             placeholder="Say something"
             style={{ flex: 1, background: 'transparent', border: 'none',
-              color: C.ink, fontSize: 15.5, outline: 'none', fontFamily: F,
-              resize: 'none', lineHeight: 1.4, padding: '10px 0',
-              maxHeight: 110 }} />
+              color: C.ink, fontSize: 15.5, fontWeight: 600, outline: 'none',
+              fontFamily: F, resize: 'none', lineHeight: 1.4, padding: '9px 0',
+              maxHeight: 96 }} />
           <button onClick={send} disabled={!text.trim() || busy}
             style={{ width: 38, height: 38, borderRadius: 999, border: 'none',
               flexShrink: 0, cursor: text.trim() ? 'pointer' : 'default',

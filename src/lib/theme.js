@@ -115,3 +115,19 @@ export const T = {
 }
 
 export const card = { background: C.card, borderRadius: 18, padding: 17, boxShadow: C.shadow }
+
+
+// Where the floating bars sit.
+//
+// The tab bar, the testing nudge and the chat composer all hover above
+// the bottom edge, and they were each guessing their own offset — which
+// showed as different gaps depending on which screen you were on. One
+// constant, used by all three.
+//
+//   tab bar:  13px from the bottom, about 50px tall
+//   so anything above it clears at 13 + 50 + 13 = 76
+export const FLOAT = {
+  bar:   'calc(13px + env(safe-area-inset-bottom))',   // the tab bar itself
+  above: 'calc(76px + env(safe-area-inset-bottom))',   // anything sitting on it
+  clear: 'calc(140px + env(safe-area-inset-bottom))',  // page padding to clear both
+}
