@@ -37,7 +37,10 @@ export default function Today({ profile, week, programme, half, onOpen,
       }),
       getCoaches().then(setCoaches).catch(() => {}),
     ]).finally(() => setReady(true))
-  }, [week])
+    // Keyed on the id, not the object. App re-renders on every profile
+    // patch, and depending on `week` itself meant a fresh object could
+    // refire all four queries — skeleton, then content, again.
+  }, [week?.id, profile?.id])
 
   if (!ready) return <SkeletonToday />
 

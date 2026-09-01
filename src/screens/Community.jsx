@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { C, T, F, FLOAT } from '../lib/theme'
 import { supabase } from '../lib/supabase'
 import { getChat, postToRoom, removeMessage, onNewMessage,
-         getNotices } from '../lib/data'
+         getNotices, getRoomMembers, joinRoom, getCoaches } from '../lib/data'
 import { Avatar, Ico, I, Sheet, Btn } from '../components/ui'
+import Img from '../components/Img'
 
 const when = d => {
   const t = new Date(d)
@@ -34,7 +35,7 @@ const dayLabel = d => {
 // Notices are pinned above it and kept deliberately small. They're the
 // things that need to still be true tomorrow; the chat is everything
 // else, and it should look like everything else.
-export default function Community({ profile, userId }) {
+export default function Community({ profile, userId, onCoach }) {
   const [msgs, setMsgs] = useState([])
   const [notices, setNotices] = useState([])
   const [text, setText] = useState('')
@@ -42,16 +43,30 @@ export default function Community({ profile, userId }) {
   const [busy, setBusy] = useState(false)
   const [open, setOpen] = useState(null)
   const [notice, setNotice] = useState(null)
+  const [members, setMembers] = useState([])
+  const [here, setHere] = useState([])
+  const [who, setWho] = useState(false)
+  const [coaches, setCoaches] = useState([])
   const bottom = useRef(null)
   const scroller = useRef(null)
 
   const load = () => getChat().then(setMsgs)
 
   useEffect(() => {
-    Promise.all([load(), getNotices().then(setNotices).catch(() => {})])
-      .finally(() => setReady(true))
-    return onNewMessage(load)
-  }, [])
+    Promise.all([
+      load(),
+      getNotices().then(setNotices).catch(() => {}),
+      getRoomMembers().then(setMembers).catch(() => {}),
+      getCoaches().then(setCoaches).catch(() => {}),
+    ]).finally(() => setReady(true))
+
+    const offChat = onNewMessage(load)
+    const offRoom = profile?.id
+      ? joinRoom({ id: profile.id, name: profile.name,
+                   photo_url: profile.photo_url }, setHere)
+      : () => {}
+    return () => { offChat(); offRoom() }
+  }, [profile?.id])
 
   // Stay pinned to the bottom, the way a chat should.
   useEffect(() => {
@@ -86,12 +101,51 @@ export default function Community({ profile, userId }) {
 
       {/* ---- pinned, small ---- */}
       <div style={{ padding: '46px 16px 0', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
           <h1 style={{ ...T.h1, fontSize: 22 }}>The room</h1>
-          <div style={{ fontSize: 12.5, color: C.mute }}>
-            everyone at Salus
-          </div>
+          <div style={{ flex: 1 }} />
+
+          {/* Faces and a count. Tapping opens the list, with whoever is
+              reading right now at the top. */}
+          <button onClick={() => setWho(true)} style={{ display: 'flex',
+            alignItems: 'center', gap: 9, background: 'transparent',
+            border: 'none', cursor: 'pointer', fontFamily: F, padding: 0 }}>
+            <div style={{ display: 'flex' }}>
+              {members.slice(0, 4).map((m, i) => (
+                <div key={m.id} style={{ marginLeft: i ? -9 : 0,
+                  border: `2px solid ${C.bg}`, borderRadius: 999,
+                  display: 'flex' }}>
+                  <Avatar name={m.name} photo={m.photo_url} size={26}
+                    online={here.some(h => h.id === m.id)} />
+                </div>
+              ))}
+            </div>
+            <span style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>
+              {members.length}
+            </span>
+          </button>
         </div>
+
+        {/* Who is actually reading. Live, not a last-seen timestamp. */}
+        {here.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7,
+            marginTop: 7 }}>
+            <span style={{ width: 6, height: 6, borderRadius: 999,
+              background: C.g }} />
+            <span style={{ fontSize: 12.5, color: C.sub }}>
+              {here.length === 1 && here[0].id === profile?.id
+                ? 'Just you in here'
+                : here
+                    .filter(h => h.id !== profile?.id)
+                    .slice(0, 3)
+                    .map(h => (h.name || '').split(' ')[0])
+                    .join(', ')
+                  + (here.length - 1 > 3
+                      ? ` and ${here.length - 4} more` : '')
+                  + (here.length - 1 === 1 ? ' is here' : ' are here')}
+            </span>
+          </div>
+        )}
 
         {pinned.length > 0 && (
           <div className="nb" style={{ display: 'flex', gap: 8, marginTop: 12,
@@ -112,6 +166,37 @@ export default function Community({ profile, userId }) {
           </div>
         )}
       </div>
+
+        {/* Ask a coach privately.
+            The room is everyone; a question about a niggle, a weight
+            you can't hit, or a week you had to miss is often not for
+            everyone. One tap out of the public thread. */}
+        {coaches.length > 0 && (
+          <div className="nb" style={{ display: 'flex', gap: 8, marginTop: 12,
+            overflowX: 'auto', paddingBottom: 2,
+            marginLeft: -16, marginRight: -16,
+            paddingLeft: 16, paddingRight: 16 }}>
+            {coaches.map(c => (
+              <button key={c.id} onClick={() => onCoach?.(c)}
+                style={{ flex: '0 0 auto', display: 'flex',
+                  alignItems: 'center', gap: 9, background: C.card,
+                  border: `1px solid ${C.line}`, borderRadius: 999,
+                  padding: '7px 14px 7px 7px', cursor: 'pointer',
+                  fontFamily: F }}>
+                <Avatar name={c.name} photo={c.photo_url} tint={c.tint}
+                  size={28} />
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700,
+                    color: C.ink }}>{c.name}</div>
+                  <div style={{ fontSize: 10.5, color: C.mute,
+                    marginTop: 1 }}>
+                    {(c.spec || [])[0] || 'Coach'}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
 
       {/* ---- the room ---- */}
       <div ref={scroller} className="nb" style={{ flex: 1, overflowY: 'auto',
@@ -161,7 +246,9 @@ export default function Community({ profile, userId }) {
 
                 <div style={{ width: 30, flexShrink: 0 }}>
                   {!grouped && !m.mine && (
-                    <Avatar name={m.name || '?'} size={30} />
+                    <Avatar name={m.name || '?'} size={30}
+                      photo={members.find(x => x.id === m.user_id)?.photo_url}
+                      online={here.some(h => h.id === m.user_id)} />
                   )}
                 </div>
 
@@ -197,10 +284,10 @@ export default function Community({ profile, userId }) {
                   </div>
 
                   {m.photo_url && !m.deleted && (
-                    <div style={{ marginTop: 5, height: 190, borderRadius: 16,
-                      borderBottomRightRadius: m.mine ? 5 : 16,
-                      borderBottomLeftRadius: m.mine ? 16 : 5,
-                      background: `#090908 url(${m.photo_url}) center/cover` }} />
+                    <Img src={m.photo_url}
+                      style={{ marginTop: 5, height: 190, borderRadius: 16,
+                        borderBottomRightRadius: m.mine ? 5 : 16,
+                        borderBottomLeftRadius: m.mine ? 16 : 5 }} />
                   )}
 
                   <div style={{ fontSize: 10.5, color: C.mute, marginTop: 3,
@@ -262,6 +349,60 @@ export default function Community({ profile, userId }) {
             background: 'transparent', border: 'none', color: C.sub,
             fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: F,
             padding: '15px 0 0' }}>Cancel</button>
+        </Sheet>
+      )}
+
+      {/* ---- everyone ---- */}
+      {who && (
+        <Sheet onClose={() => setWho(false)}>
+          <div style={{ ...T.h2 }}>
+            {members.length} at Salus
+          </div>
+          <p style={{ ...T.small, marginTop: 7 }}>
+            {here.length} reading right now.
+          </p>
+          <div style={{ marginTop: 18, maxHeight: '58vh',
+            overflowY: 'auto' }} className="nb">
+            {[...members]
+              .sort((a, b) => {
+                const ao = here.some(h => h.id === a.id) ? 0 : 1
+                const bo = here.some(h => h.id === b.id) ? 0 : 1
+                return ao - bo
+              })
+              .map((m, i) => {
+                const online = here.some(h => h.id === m.id)
+                return (
+                  <div key={m.id} style={{ display: 'flex',
+                    alignItems: 'center', gap: 13, padding: '12px 0',
+                    borderTop: i ? `1px solid ${C.line}` : 'none' }}>
+                    <Avatar name={m.name} photo={m.photo_url} size={38}
+                      online={online} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600 }}>
+                        {m.name}
+                        {m.id === profile?.id && (
+                          <span style={{ color: C.mute,
+                            fontWeight: 500 }}> (you)</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 12, color: C.mute,
+                        marginTop: 2 }}>
+                        {online ? 'Here now'
+                          : m.last_trained
+                            ? `Last trained ${when(m.last_trained)}`
+                            : 'Not started yet'}
+                      </div>
+                    </div>
+                    {m.is_coach && (
+                      <span style={{ fontSize: 9, fontWeight: 800,
+                        letterSpacing: '.1em', color: C.g }}>COACH</span>
+                    )}
+                  </div>
+                )
+              })}
+          </div>
+          <Btn tone="soft" style={{ marginTop: 18 }}
+            onClick={() => setWho(false)}>Close</Btn>
         </Sheet>
       )}
 

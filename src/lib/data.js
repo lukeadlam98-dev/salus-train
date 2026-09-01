@@ -56,7 +56,8 @@ export async function getMyProgramme() {
     ? { programme_id: fallback.id, slug: fallback.slug, name: fallback.name,
         total_weeks: fallback.weeks, race_name: fallback.race_name,
         uses_half: fallback.uses_half, race_image: fallback.race_image,
-        race_location: fallback.race_location, race_date: fallback.race_date }
+        race_location: fallback.race_location, race_date: fallback.race_date,
+        image_count: 0 }
     : null
 }
 
@@ -581,5 +582,89 @@ export async function getWeekSessions(weekId) {
 /* ---------------- workout of the week ---------------- */
 export async function getWotw() {
   const { data } = await supabase.from('wotw_board').select('*').order('place')
+  return data || []
+}
+
+/* ---------------- the room's members and presence ---------------- */
+export async function getRoomMembers() {
+  const { data } = await supabase.from('room_members').select('*')
+  return data || []
+}
+
+// Who has the app open, right now.
+//
+// Supabase Realtime Presence rather than a "last seen" column: this is
+// a live fact with no history worth keeping, and writing it to a table
+// would mean a database write every thirty seconds per member.
+//
+// Returns an unsubscribe. Call it on unmount or the channel leaks.
+export function joinRoom(me, onChange) {
+  const ch = supabase.channel('room-presence', {
+    config: { presence: { key: me.id } },
+  })
+
+  const read = () => {
+    const state = ch.presenceState()
+    onChange(Object.values(state).flat())
+  }
+
+  ch.on('presence', { event: 'sync' }, read)
+    .on('presence', { event: 'join' }, read)
+    .on('presence', { event: 'leave' }, read)
+    .subscribe(async status => {
+      if (status !== 'SUBSCRIBED') return
+      await ch.track({
+        id: me.id, name: me.name, photo_url: me.photo_url || null,
+        at: new Date().toISOString(),
+      })
+    })
+
+  return () => { supabase.removeChannel(ch) }
+}
+
+export async function setPhoto(userId, url) {
+  const { error } = await supabase.from('profiles')
+    .update({ photo_url: url }).eq('id', userId)
+  if (error) throw error
+}
+
+// Switching block. Resets the week, because week five of one block has
+// nothing to do with week five of another.
+export async function joinProgramme(userId, programmeId) {
+  const { error } = await supabase.from('profiles')
+    .update({ programme_id: programmeId, week_idx: 1,
+              week_started: new Date().toISOString().slice(0, 10) })
+    .eq('id', userId)
+  if (error) throw error
+}
+
+/* ---------------- the running ---------------- */
+
+// Maffetone's zone — 180 minus age, five beats either side. Returns
+// null with no birth year rather than guessing: a made-up heart rate
+// ceiling is worse than none.
+export async function getAerobicZone(userId) {
+  const { data } = await supabase.rpc('my_aerobic_zone', { p_user: userId })
+  return data?.[0] || null
+}
+
+export async function setBirthYear(userId, year) {
+  const { error } = await supabase.from('profiles')
+    .update({ birth_year: year }).eq('id', userId)
+  if (error) throw error
+}
+
+// The ten tests, with whatever's been recorded against each. Driven by
+// a table rather than a list in the code, so a coach adding an
+// eleventh doesn't need a deploy.
+export async function getMyTests() {
+  const { data } = await supabase.from('my_tests').select('*').order('ord')
+  return data || []
+}
+
+// Strength, engine, stations — scored separately, because one number
+// says where you rank and three say what to do on Monday.
+export async function getPillars(userId) {
+  const { data } = await supabase.rpc('my_pillars', { p_user: userId })
   return data || []
 }

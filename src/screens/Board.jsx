@@ -49,7 +49,7 @@ export default function Board({ profile, userId, onShare }) {
           week is not a reason to open the tab twice. */}
       <div style={{ display: 'flex', background: C.card2, borderRadius: 999,
         padding: 4, marginTop: 18 }}>
-        {[['salus', 'The Salus'], ['wotw', 'This week']].map(([k, l]) => {
+        {[['salus', 'Salus Test'], ['wotw', 'WOD']].map(([k, l]) => {
           const on = tab === k
           return (
             <button key={k} onClick={() => setTab(k)}
@@ -144,12 +144,12 @@ export default function Board({ profile, userId, onShare }) {
       {tab === 'wotw' && (
         <>
           {!w ? (
-            <Empty icon={I.chart} title="Nothing set this week"
-              body="A coach picks one session as the workout of the week. When they do, everyone's time on it lands here." />
+            <Empty icon={I.chart} title="No WOD set this week"
+              body="A coach picks one session as the WOD. When they do, everyone's score on it lands here." />
           ) : (
             <>
               <Card style={{ marginTop: 16 }}>
-                <Label>THIS WEEK</Label>
+                <Label>THIS WEEK'S WOD</Label>
                 <div style={{ ...T.h1, fontSize: 24, marginTop: 7 }}>
                   {w.session_title}
                 </div>

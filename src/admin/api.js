@@ -596,8 +596,8 @@ export async function adoptMeasuredMultiplier() {
   return data
 }
 
-// Workout of the week. Only one at a time — the function clears the
-// old one, so a coach can't leave two set by accident.
+// The WOD. Only one at a time — the function clears the old one, so a
+// coach can't leave two set by accident.
 export async function setWotw(sessionId) {
   const { error } = await supabase.rpc('set_wotw', { p_session: sessionId })
   if (error) throw error
@@ -614,3 +614,20 @@ export async function getMissingMedia() {
   const { data } = await supabase.from('missing_media').select('*')
   return data || []
 }
+
+/* ---------------- the race photo set ---------------- */
+export async function listProgrammeImages(programmeId) {
+  const { data } = await supabase.from('programme_images')
+    .select('*').eq('programme_id', programmeId)
+    .order('ord', { nullsFirst: false })
+  return data || []
+}
+
+export async function addProgrammeImage(programmeId, url, ord) {
+  const { error } = await supabase.from('programme_images')
+    .insert({ programme_id: programmeId, url, ord })
+  if (error && error.code !== '23505') throw error
+}
+
+export const removeProgrammeImage = id =>
+  supabase.from('programme_images').delete().eq('id', id)

@@ -14,16 +14,24 @@ import { Ico, I, Sheet, Btn } from './ui'
 // makes it a nudge rather than nagging.
 
 const TESTS = [
-  { key: 'bw',    label: 'Bodyweight',     why: 'Everything relative is calculated from it.',
+  { key: 'bw',       label: 'Bodyweight',         why: 'Everything relative is worked out from it.',
     fmt: v => `${v.value_num} kg` },
-  { key: 'squat', label: 'Back squat 5RM', why: 'Sets every lifting weight in the block.',
+  { key: 'squat',    label: 'Back squat 3RM',     why: 'Sets every squat, lunge and step-up in the block.',
     fmt: v => `${v.value_num} kg` },
-  { key: 'fivek', label: '5km',            why: 'Sets every running pace, and half the projection.',
+  { key: 'deadlift', label: 'Deadlift 5RM',       why: 'Sets the pulls.',
+    fmt: v => `${v.value_num} kg` },
+  { key: 'press',    label: 'Shoulder press 1RM', why: 'Sets the overhead work.',
+    fmt: v => `${v.value_num} kg` },
+  { key: 'fivek',    label: '5km',                why: 'Sets every running pace, and half the projection.',
     fmt: v => fmt(v.value_s) },
-  { key: 'ski',   label: '1,000m SkiErg',  why: 'Station one, and a read on your engine.',
+  { key: 'ski',      label: '1,000m SkiErg',      why: 'Station one, and a read on your engine.',
     fmt: v => fmt(v.value_s) },
-  { key: 'row',   label: '1,000m Row',     why: 'Station five, fresh.',
+  { key: 'row',      label: '1,000m Row',         why: 'Station five, fresh.',
     fmt: v => fmt(v.value_s) },
+  { key: 'sled',     label: 'Sled push 50m',      why: 'The station most people are slowest at and nobody tests.',
+    fmt: v => fmt(v.value_s) },
+  { key: 'wallball', label: 'Wall balls',         why: 'Max unbroken. Decides how the last station goes.',
+    fmt: v => `${v.value_num} reps` },
 ]
 
 const Ring = ({ done, total, size = 38 }) => {
@@ -94,7 +102,7 @@ export default function Setup({ benchmarks = {}, half, onGoToTests,
 
       {open && (
         <Sheet onClose={() => setOpen(false)}>
-          <div style={{ ...T.h2 }}>Your five tests</div>
+          <div style={{ ...T.h2 }}>Your ten tests</div>
           <p style={{ ...T.small, marginTop: 7 }}>
             Every weight, every pace and the projection are worked out from
             these. Until they're in, the block is running on defaults.

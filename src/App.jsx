@@ -13,6 +13,7 @@ import Onboard  from './screens/Onboard'
 import Today    from './screens/Today'
 import Plan     from './screens/Plan'
 import Block    from './screens/Block'
+import Programmes from './screens/Programmes'
 import Community from './screens/Community'
 import Board    from './screens/Board'
 import Coaches  from './screens/Coaches'
@@ -50,6 +51,7 @@ export default function App() {
   const [coaches, setCoaches] = useState(false)
   const [progress, setProgress] = useState(false)
   const [races, setRaces] = useState(false)
+  const [blocks, setBlocks] = useState(false)
   const [screen, setScreen] = useState(null)   // null | session | half | effort | done
   const [active, setActive] = useState(null)   // the session being worked
   const [result, setResult] = useState(null)
@@ -213,6 +215,15 @@ export default function App() {
     </Shell>
   )
 
+  /* ---------- other blocks ---------- */
+  if (blocks) return (
+    <Shell>
+      <Programmes userId={session.user.id} profile={profile}
+        onBack={() => setBlocks(false)}
+        onJoined={() => { setBlocks(false); window.location.reload() }} />
+    </Shell>
+  )
+
   /* ---------- races ---------- */
   if (races) return (
     <Shell>
@@ -273,7 +284,8 @@ export default function App() {
       </Keep>
 
       <Keep on={tab === 'community'}>
-        <Community profile={profile} userId={session.user.id} />
+        <Community profile={profile} userId={session.user.id}
+          onCoach={() => setCoaches(true)} />
       </Keep>
 
       <Keep on={tab === 'leaderboard'}>
@@ -288,7 +300,8 @@ export default function App() {
           onCoaches={() => setCoaches(true)}
           onRaces={() => setRaces(true)}
           onProgress={() => setProgress(true)}
-          onHalf={() => setScreen('half')} />
+          onHalf={() => setScreen('half')}
+          onBlocks={() => setBlocks(true)} />
       </Keep>
       {/* The nudge sits above the tabs and disappears once the five
           tests are in. Not dismissible on purpose: a member who skips

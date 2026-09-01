@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { C, T, F } from '../lib/theme'
 import { fmt } from '../lib/format'
-import { saveRun } from '../lib/data'
+import { saveRun, getAerobicZone } from '../lib/data'
 import { Card, Label, Btn, Back, Ico, I, page } from '../components/ui'
 import Keypad from '../components/Keypad'
+import RunPlan from '../components/RunPlan'
 
 const pace = (m, s) => m > 0 && s > 0 ? Math.round(s / (m / 1000)) : null
 
@@ -26,7 +27,12 @@ export default function Run({ userId, session, onBack, onDone }) {
   const [pad, setPad] = useState(null)
   const [entry, setEntry] = useState({ distance_m: dist, seconds: null })
   const [busy, setBusy] = useState(false)
+  const [zone, setZone] = useState(null)
   const tick = useRef(null)
+
+  useEffect(() => {
+    getAerobicZone(userId).then(setZone).catch(() => {})
+  }, [userId])
 
   useEffect(() => {
     if (!running) return
@@ -148,6 +154,12 @@ export default function Run({ userId, session, onBack, onDone }) {
         <h1 style={{ ...T.h1, marginTop: 7 }}>
           {session?.title || 'Run'}
         </h1>
+        {/* What this run is actually for. Each kind needs saying
+            differently — printing "45 min run" for all of them is how
+            people end up doing the same moderate slog three times a
+            week. */}
+        <RunPlan session={session} zone={zone} />
+
         {compromised && (
           <p style={{ ...T.body, marginTop: 6 }}>
             {reps} × {dist}m with a station between each. Tap Lap when you start

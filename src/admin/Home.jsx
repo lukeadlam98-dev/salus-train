@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { C, T, F } from '../lib/theme'
 import { A, previewVars } from './theme'
 import * as api from './api'
+import ImageSet from './ImageSet'
 import { Save, Field, Toggle, Btn, ImagePicker, Confirm, Sortable, Grip } from './widgets'
 import DeleteProgramme from './DeleteProgramme'
 
@@ -153,15 +154,9 @@ export default function Home() {
                       <Save value={p.race_location} placeholder="Where — ExCeL, London"
                         onSave={v => api.setProgramme(p.id, { race_location: v })} />
                     </div>
-                    <div style={{ marginTop: 9 }}>
-                      <Field label="Race photo"
-                        hint="Sits behind the countdown. The venue, or a start line — something they're counting down to.">
-                        <ImagePicker value={p.race_image}
-                          onChange={v => run(async () => {
-                            await api.setProgramme(p.id, { race_image: v })
-                            await loadP()
-                          })} />
-                      </Field>
+                    <div style={{ marginTop: 14, paddingTop: 14,
+                      borderTop: `1px solid ${C.line}` }}>
+                      <ImageSet programmeId={p.id} />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14,
                       marginTop: 10 }}>

@@ -2,18 +2,27 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { C, T, F } from '../lib/theme'
 import { fmt, hhmm } from '../lib/format'
-import { saveBenchmark, getMyScore } from '../lib/data'
+import { saveBenchmark, getMyScore, setPhoto,
+         getAerobicZone, setBirthYear } from '../lib/data'
 import { Card, Label, Btn, Avatar, Ico, I, page } from '../components/ui'
 import Score from './Score'
 import Paces from './Paces'
+import Pillars from './Pillars'
 import Keypad from '../components/Keypad'
 
+// Ten now, not five. Kept here as well as in the database so the
+// screen renders before the query lands — the database is the source
+// of truth for what exists, this is the shape of it.
 const BM = [
-  { key: 'squat', name: 'Back squat 5RM', unit: 'kg', ph: '100' },
-  { key: 'fivek', name: '5km time trial', time: true, ph: '27:00' },
-  { key: 'ski',   name: '1,000m SkiErg',  time: true, ph: '4:20' },
-  { key: 'row',   name: '1,000m Row',     time: true, ph: '3:55' },
-  { key: 'bw',    name: 'Bodyweight',     unit: 'kg', ph: '80' },
+  { key: 'bw',       name: 'Bodyweight',         unit: 'kg', ph: '80' },
+  { key: 'squat',    name: 'Back squat 3RM',     unit: 'kg', ph: '110' },
+  { key: 'deadlift', name: 'Deadlift 5RM',       unit: 'kg', ph: '130' },
+  { key: 'press',    name: 'Shoulder press 1RM', unit: 'kg', ph: '60' },
+  { key: 'fivek',    name: '5km',                time: true, ph: '24:00' },
+  { key: 'ski',      name: '1,000m SkiErg',      time: true, ph: '4:00' },
+  { key: 'row',      name: '1,000m Row',         time: true, ph: '3:45' },
+  { key: 'sled',     name: 'Sled push 50m',      time: true, ph: '0:48' },
+  { key: 'wallball', name: 'Wall balls',         unit: 'reps', ph: '50' },
 ]
 
 // Me.
@@ -23,10 +32,31 @@ const BM = [
 // here, and the settings nobody opens twice.
 export default function You({ userId, profile, benchmarks, setBenchmarks,
                               half, onUpdate, onCoaches, onRaces, onProgress,
-                              onHalf }) {
+                              onHalf, onBlocks }) {
   const [pad, setPad] = useState(null)
   const [score, setScore] = useState(null)
   const [tab, setTab] = useState('numbers')
+  const [busy, setBusy] = useState(false)
+
+  // A face in the room rather than an initial. Uploaded to the same
+  // bucket as everything else, under the member's own id so it can be
+  // replaced rather than accumulating.
+  async function pickPhoto(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || file.size > 8 * 1024 * 1024) return
+    setBusy(true)
+    try {
+      const name = `avatars/${userId}.jpg`
+      await supabase.storage.from('Photos')
+        .upload(name, file, { upsert: true, cacheControl: '60' })
+      const url = supabase.storage.from('Photos')
+        .getPublicUrl(name).data.publicUrl + '?v=' + Date.now()
+      await setPhoto(userId, url)
+      onUpdate({ photo_url: url })
+    } catch (_) {}
+    setBusy(false)
+  }
 
   // Keyed on the values, not the object. benchmarks is a new object
   // on every save, so depending on it directly refetched the score on
@@ -38,6 +68,10 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
 
   useEffect(() => { getMyScore(userId).then(setScore).catch(() => {}) },
     [userId, bmKey, half?.total])
+
+  const [zone, setZone] = useState(null)
+  useEffect(() => { getAerobicZone(userId).then(setZone).catch(() => {}) },
+    [userId, profile?.birth_year])
 
   const squat = benchmarks.squat?.value_num
   const bw = benchmarks.bw?.value_num
@@ -63,7 +97,20 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
 
       {/* ---- who ---- */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-        <Avatar name={profile?.name || '?'} size={62} />
+        <label style={{ position: 'relative', cursor: 'pointer',
+          flexShrink: 0, opacity: busy ? .5 : 1 }}>
+          <Avatar name={profile?.name || '?'} size={62}
+            photo={profile?.photo_url} />
+          <div style={{ position: 'absolute', bottom: -2, right: -2,
+            width: 24, height: 24, borderRadius: 999, background: C.g,
+            display: 'grid', placeItems: 'center',
+            border: `2px solid ${C.bg}` }}>
+            <Ico d={I.camera} s={12} c={C.bg} w={2} />
+          </div>
+          <input type="file" accept="image/*" onChange={pickPhoto}
+            style={{ position: 'absolute', width: 1, height: 1,
+              opacity: 0 }} />
+        </label>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...T.h1, fontSize: 23 }}>{profile?.name || 'You'}</div>
           <div style={{ ...T.small, marginTop: 4 }}>
@@ -116,7 +163,7 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
       {/* ---- numbers or paces ---- */}
       <div style={{ display: 'flex', background: C.card2, borderRadius: 999,
         padding: 4, marginTop: 22 }}>
-        {[['numbers', `Tests ${done + (half?.total ? 1 : 0)}/6`], ['paces', 'Paces'],
+        {[['numbers', `Tests ${done + (half?.total ? 1 : 0)}/10`], ['paces', 'Paces'],
           ['score', 'Score']].map(([k, l]) => {
           const on = tab === k
           return (
@@ -203,9 +250,62 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
 
       {tab === 'paces' && (
         <div style={{ marginTop: 14 }}>
-          <Paces fivekSeconds={benchmarks?.fivek?.value_s} compact={false} />
+          {/* The easy runs are governed by heart rate rather than pace,
+              so the zone belongs here rather than buried in settings.
+              One number — the year — because Maffetone only needs an
+              age and storing less is the right default. */}
+          <Card>
+            <Label>YOUR AEROBIC ZONE</Label>
+            {zone ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8,
+                  marginTop: 8 }}>
+                  <div style={{ fontSize: 30, fontWeight: 900,
+                    letterSpacing: '-.045em', ...T.num, color: C.g }}>
+                    {zone.low}–{zone.high}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.sub }}>
+                    bpm
+                  </div>
+                </div>
+                <div style={{ ...T.small, fontSize: 12.5, marginTop: 8,
+                  lineHeight: 1.55 }}>
+                  180 minus {zone.age}, five beats either side. Ten in the
+                  heat. Every easy run and every long run sits in here — if
+                  you can't hold a conversation, walk until you can.
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ ...T.small, marginTop: 8, lineHeight: 1.55 }}>
+                  Your easy runs are set by heart rate, not pace. One number
+                  and the app can work it out.
+                </div>
+                <div style={{ display: 'flex', gap: 9, marginTop: 14 }}>
+                  <input inputMode="numeric" placeholder="Birth year, e.g. 1991"
+                    onKeyDown={async e => {
+                      if (e.key !== 'Enter') return
+                      const y = Number(e.currentTarget.value)
+                      if (y > 1920 && y < 2015) {
+                        await setBirthYear(userId, y)
+                        onUpdate({ birth_year: y })
+                        getAerobicZone(userId).then(setZone)
+                      }
+                    }}
+                    style={{ flex: 1, background: C.card2, color: C.ink,
+                      border: `1px solid ${C.line}`, borderRadius: 12,
+                      padding: '13px 15px', fontSize: 16, outline: 'none',
+                      fontFamily: F }} />
+                </div>
+              </>
+            )}
+          </Card>
+
+          <div style={{ marginTop: 14 }}>
+            <Paces fivekSeconds={benchmarks?.fivek?.value_s} compact={false} />
+          </div>
           {!benchmarks?.fivek && (
-            <Card style={{ marginTop: 4 }}>
+            <Card style={{ marginTop: 10 }}>
               <div style={{ ...T.small }}>
                 Put your 5km in and every pace in the block is worked out from it.
               </div>
@@ -216,20 +316,21 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
 
       {tab === 'score' && (
         <div style={{ marginTop: 14 }}>
-          {score?.rows?.length
-            ? <Score score={score} />
-            : <Card><div style={{ ...T.small }}>
-                Do the tests and this fills in — every one scored against a fixed
-                standard, so it only moves when you do.
-              </div></Card>}
+          {/* Three pillars rather than one number. Where the gap is
+              matters more than where the average is — a race has to be
+              got through in full, so the weakest part costs more than
+              the strongest gains. */}
+          <Pillars userId={userId} />
         </div>
       )}
 
       {/* ---- where to go ---- */}
       <Label style={{ margin: '28px 0 11px' }}>YOUR TRAINING</Label>
       <Card style={{ padding: '3px 15px' }}>
+        <Row icon={I.list}  label="Blocks"
+          sub="What else the coaches are running" onClick={onBlocks} />
         <Row icon={I.cal}   label="My races"
-          sub="What's booked, and how the done ones went" onClick={onRaces} />
+          sub="What's booked, and how the done ones went" onClick={onRaces} top />
         <Row icon={I.chart} label="Progress"
           sub="Every movement, and whether it's going up" onClick={onProgress} top />
         <Row icon={I.msg}   label="Ask a coach"

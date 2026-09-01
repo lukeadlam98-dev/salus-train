@@ -100,12 +100,20 @@ export const Back = ({ onClick, children }) => (
   </button>
 )
 
-export const Avatar = ({ name, tint, size = 44 }) => (
+// A face where there is one, an initial where there isn't.
+//
+// The ring is for presence — a bone outline means that person has the
+// app open right now. It sits outside the avatar rather than on it so
+// a photo isn't cropped by its own status.
+export const Avatar = ({ name, tint, photo, size = 44, online }) => (
   <div style={{
     width: size, height: size, borderRadius: 999, flexShrink: 0,
-    background: tint || '#4A3F34', display: 'grid', placeItems: 'center',
+    background: photo ? `#090908 url(${photo}) center/cover`
+                      : (tint || '#4A3F34'),
+    display: 'grid', placeItems: 'center',
     fontSize: size * 0.34, fontWeight: 800, color: 'rgba(255,255,255,.92)',
-  }}>{(name || '?')[0].toUpperCase()}</div>
+    boxShadow: online ? `0 0 0 2px ${C.bg}, 0 0 0 3.5px ${C.g}` : 'none',
+  }}>{photo ? '' : (name || '?')[0].toUpperCase()}</div>
 )
 
 export const Medal = ({ rank, size = 23 }) => {
@@ -126,6 +134,7 @@ export const Medal = ({ rank, size = 23 }) => {
 /* ---------------- icons ---------------- */
 export const I = {
   bolt:  'M13 2L4 14h6l-1 8 9-12h-6z',
+  list:  'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
   cal:   'M3 9h18M7 3v3M17 3v3M4 5h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z',
   chart: 'M3 17l6-6 4 4 8-8M21 7v5h-5',
   msg:   'M21 11.5a8.4 8.4 0 01-9 8.4 8.9 8.9 0 01-4-.9L3 21l2-4a8.4 8.4 0 01-1-4 8.4 8.4 0 018.5-8.4h.5a8.4 8.4 0 018 8.4z',

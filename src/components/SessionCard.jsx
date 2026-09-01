@@ -1,6 +1,7 @@
 import { C, T, P, F } from '../lib/theme'
 import { DAYS } from '../lib/format'
 import { Ico, I, Avatar } from './ui'
+import Img from './Img'
 
 // The whole session, on the card.
 //
@@ -48,8 +49,8 @@ export default function SessionCard({ session, blocks = [], coach,
           {(s.video_url || coach) && (
             <div style={{ position: 'relative', flexShrink: 0 }}>
               {coach?.photo_url ? (
-                <div style={{ width: 54, height: 62, borderRadius: 11,
-                  background: `#0A0A09 url(${coach.photo_url}) center/cover` }} />
+                <Img src={coach.photo_url} radius={11}
+                  style={{ width: 54, height: 62 }} />
               ) : (
                 <Avatar name={coach?.name || 'S'} tint={coach?.tint} size={54} />
               )}

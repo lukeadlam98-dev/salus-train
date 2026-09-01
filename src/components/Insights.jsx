@@ -1,6 +1,7 @@
 import { C, T, F } from '../lib/theme'
 import { hhmm } from '../lib/format'
 import { Ico, I } from './ui'
+import Img from './Img'
 
 // One card, not three tiles.
 //
@@ -32,8 +33,8 @@ export default function Insights({ days, raceDate, programme, half, prediction,
       <div style={{ position: 'relative', minHeight: set ? 132 : 118 }}>
         {programme?.race_image && (
           <>
-            <div style={{ position: 'absolute', inset: 0,
-              background: `#0A0A09 url(${programme.race_image}) center/cover` }} />
+            <Img src={programme.race_image}
+              style={{ position: 'absolute', inset: 0 }} />
             <div style={{ position: 'absolute', inset: 0,
               background: 'linear-gradient(180deg,rgba(10,10,9,.2),' +
                           'rgba(10,10,9,.9) 82%)' }} />
