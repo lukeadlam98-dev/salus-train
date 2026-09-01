@@ -30,3 +30,22 @@ export const daysUntil = date => date
 export const round2h = n => Math.round(n / 2.5) * 2.5
 
 export const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+
+// Metric to imperial, for members who think in pounds and miles.
+//
+// Weights round to the nearest 5lb because that's what the plates do,
+// and a target of 173.4lb is a number nobody can load.
+export const kg = (v, units) =>
+  v == null ? null
+    : units === 'imperial' ? Math.round(v * 2.20462 / 5) * 5
+    : v
+
+export const kgUnit = units => units === 'imperial' ? 'lb' : 'kg'
+
+export const km = (v, units) =>
+  v == null ? null
+    : units === 'imperial' ? +(v * 0.621371).toFixed(2)
+    : v
+
+export const kmUnit = units => units === 'imperial' ? 'mi' : 'km'

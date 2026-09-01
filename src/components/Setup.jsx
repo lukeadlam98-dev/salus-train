@@ -28,6 +28,8 @@ const TESTS = [
     fmt: v => fmt(v.value_s) },
   { key: 'row',      label: '1,000m Row',         why: 'Station five, fresh.',
     fmt: v => fmt(v.value_s) },
+  { key: 'wallball', label: 'Wall balls',         why: 'Max unbroken. Decides how the last station goes.',
+    fmt: v => `${v.value_num} reps` },
 ]
 
 const Ring = ({ done, total, size = 38 }) => {
@@ -98,7 +100,7 @@ export default function Setup({ benchmarks = {}, half, onGoToTests,
 
       {open && (
         <Sheet onClose={() => setOpen(false)}>
-          <div style={{ ...T.h2 }}>Your eight tests</div>
+          <div style={{ ...T.h2 }}>Your nine tests</div>
           <p style={{ ...T.small, marginTop: 7 }}>
             Every weight, every pace and the projection are worked out from
             these. Until they're in, the block is running on defaults.

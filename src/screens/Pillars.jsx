@@ -10,9 +10,14 @@ import { Card, Label } from '../components/ui'
 // because HYROX rewards the athlete with no weakness far more than the
 // one with a standout strength.
 //
-// The stations aren't scored. Measuring them properly needs the sled
-// at race weight and a consistent target height, and a test nobody can
-// repeat the same way twice is worse than no test at all.
+// Wall balls sit inside the engine rather than being a pillar of their
+// own — one test doesn't make a category, and a hundred wall balls at
+// the end of a race is an aerobic problem far more than a strength
+// one, which is why people who can squat break at thirty.
+//
+// The sled isn't tested at all. Surface, sled type and what "race
+// weight" means all vary by floor, so the number would be about the
+// gym as much as the athlete.
 //
 // Everything is relative to bodyweight. An 80kg member pressing 60 is
 // in better shape for eight kilometres of running than a 110kg member
@@ -26,7 +31,7 @@ const ADVICE = {
   },
   Engine: {
     low:  'This is where the time is. Eight kilometres is most of a HYROX and running is the cheapest thing to improve — add easy volume before anything else.',
-    mid:  'Solid. The intervals are what turn this into race pace rather than just fitness.',
+    mid:  'Solid. The intervals are what turn this into race pace rather than just fitness — and if the wall balls are the low one here, that\u2019s a breathing problem, not a shoulder one.',
     high: 'Strong. Don\u2019t let it slip while you chase the other two.',
   },
 }

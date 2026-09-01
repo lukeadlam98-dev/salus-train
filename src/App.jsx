@@ -63,6 +63,29 @@ export default function App() {
   /* ---------- auth ---------- */
   // The splash needs the media config before anyone has signed in,
   // so this runs on its own rather than waiting for a session.
+  // Keep the screen on while the app is open, if they've asked for it.
+  // A phone that sleeps between sets means unlocking it with chalk on
+  // your hands, every set, for an hour.
+  useEffect(() => {
+    if (!profile || profile.keep_awake === false) return
+    if (!('wakeLock' in navigator)) return
+    let lock = null
+    const ask = async () => {
+      try { lock = await navigator.wakeLock.request('screen') } catch (_) {}
+    }
+    ask()
+    // Safari drops the lock when the tab is backgrounded, so take it
+    // again on return rather than leaving the screen dying mid-session.
+    const again = () => {
+      if (document.visibilityState === 'visible') ask()
+    }
+    document.addEventListener('visibilitychange', again)
+    return () => {
+      document.removeEventListener('visibilitychange', again)
+      lock?.release?.().catch(() => {})
+    }
+  }, [profile?.keep_awake])
+
   useEffect(() => {
     getConfig().then(setCfg).catch(() => {})
     getTabs().then(setTabItems).catch(() => {})
@@ -294,7 +317,9 @@ export default function App() {
       </Keep>
 
       <Keep on={tab === 'me'}>
-        <You userId={session.user.id} profile={profile}
+        <You userId={session.user.id}
+          profile={{ ...profile, email: session.user.email,
+                     programme_name: programme?.name }}
           benchmarks={benchmarks} setBenchmarks={setBenchmarks}
           half={half} onUpdate={patch}
           onCoaches={() => setCoaches(true)}

@@ -5,14 +5,10 @@ import { fmt, hhmm } from '../lib/format'
 import { saveBenchmark, getMyScore, setPhoto,
          getAerobicZone, setBirthYear } from '../lib/data'
 import { Card, Label, Btn, Avatar, Ico, I, page } from '../components/ui'
-import Score from './Score'
 import Paces from './Paces'
 import Pillars from './Pillars'
 import Keypad from '../components/Keypad'
 
-// Ten now, not five. Kept here as well as in the database so the
-// screen renders before the query lands — the database is the source
-// of truth for what exists, this is the shape of it.
 const BM = [
   { key: 'bw',       name: 'Bodyweight',         unit: 'kg', ph: '80' },
   { key: 'squat',    name: 'Back squat 3RM',     unit: 'kg', ph: '110' },
@@ -21,24 +17,49 @@ const BM = [
   { key: 'fivek',    name: '5km',                time: true, ph: '24:00' },
   { key: 'ski',      name: '1,000m SkiErg',      time: true, ph: '4:00' },
   { key: 'row',      name: '1,000m Row',         time: true, ph: '3:45' },
+  { key: 'wallball', name: 'Wall balls',         unit: 'reps', ph: '50' },
 ]
 
 // Me.
 //
-// Four things in descending order of how often anyone looks at them:
-// who you are and what you're on for, your numbers, where to go from
-// here, and the settings nobody opens twice.
+// Laid out the way a settings screen should be: who you are at the
+// top, then labelled sections you can scan rather than one long list
+// where a toggle and a benchmark look the same.
 export default function You({ userId, profile, benchmarks, setBenchmarks,
                               half, onUpdate, onCoaches, onRaces, onProgress,
                               onHalf, onBlocks }) {
   const [pad, setPad] = useState(null)
   const [score, setScore] = useState(null)
+  const [zone, setZone] = useState(null)
   const [tab, setTab] = useState('numbers')
   const [busy, setBusy] = useState(false)
 
-  // A face in the room rather than an initial. Uploaded to the same
-  // bucket as everything else, under the member's own id so it can be
-  // replaced rather than accumulating.
+  const has = b => {
+    const v = benchmarks[b.key]
+    return !!v && (b.time ? v.value_s != null : v.value_num != null)
+  }
+  const done = BM.filter(has).length
+
+  const bmKey = BM.map(b => {
+    const v = benchmarks[b.key]
+    return v ? (b.time ? v.value_s : v.value_num) : ''
+  }).join('|')
+
+  useEffect(() => { getMyScore(userId).then(setScore).catch(() => {}) },
+    [userId, bmKey, half?.total])
+  useEffect(() => { getAerobicZone(userId).then(setZone).catch(() => {}) },
+    [userId, profile?.birth_year])
+
+  const squat = benchmarks.squat?.value_num
+  const bw = benchmarks.bw?.value_num
+  const si = squat && bw ? squat / bw : null
+
+  async function save(b, v) {
+    const row = await saveBenchmark(userId, b.key,
+      b.time ? { secs: v } : { num: v })
+    if (row) setBenchmarks({ ...benchmarks, [b.key]: row })
+  }
+
   async function pickPhoto(e) {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -56,73 +77,44 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
     setBusy(false)
   }
 
-  // Keyed on the values, not the object. benchmarks is a new object
-  // on every save, so depending on it directly refetched the score on
-  // every keystroke's worth of state change.
-  const bmKey = BM.map(b => {
-    const v = benchmarks[b.key]
-    return v ? (b.time ? v.value_s : v.value_num) : ''
-  }).join('|')
-
-  useEffect(() => { getMyScore(userId).then(setScore).catch(() => {}) },
-    [userId, bmKey, half?.total])
-
-  const [zone, setZone] = useState(null)
-  useEffect(() => { getAerobicZone(userId).then(setZone).catch(() => {}) },
-    [userId, profile?.birth_year])
-
-  const squat = benchmarks.squat?.value_num
-  const bw = benchmarks.bw?.value_num
-  const si = squat && bw ? squat / bw : null
-  // A row that exists with a null value is not a test that's been
-  // done. Counting it as done is what hid the bug above for a week.
-  const has = b => {
-    const v = benchmarks[b.key]
-    return !!v && (b.time ? v.value_s != null : v.value_num != null)
-  }
-  const done = BM.filter(has).length
-
-  async function save(b, v) {
-    // saveBenchmark takes { num, secs } — passing { value_num } wrote
-    // a null and the row came back blank while still counting as done.
-    const row = await saveBenchmark(userId, b.key,
-      b.time ? { secs: v } : { num: v })
-    if (row) setBenchmarks({ ...benchmarks, [b.key]: row })
-  }
-
   return (
     <div style={page}>
 
       {/* ---- who ---- */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-        <label style={{ position: 'relative', cursor: 'pointer',
-          flexShrink: 0, opacity: busy ? .5 : 1 }}>
-          <Avatar name={profile?.name || '?'} size={62}
+      <div style={{ textAlign: 'center' }}>
+        <label style={{ position: 'relative', display: 'inline-block',
+          cursor: 'pointer', opacity: busy ? .5 : 1 }}>
+          <Avatar name={profile?.name || '?'} size={92}
             photo={profile?.photo_url} />
-          <div style={{ position: 'absolute', bottom: -2, right: -2,
-            width: 24, height: 24, borderRadius: 999, background: C.g,
+          <div style={{ position: 'absolute', bottom: 2, right: 2,
+            width: 30, height: 30, borderRadius: 999, background: C.card3,
             display: 'grid', placeItems: 'center',
-            border: `2px solid ${C.bg}` }}>
-            <Ico d={I.camera} s={12} c={C.bg} w={2} />
+            border: `3px solid ${C.bg}` }}>
+            <Ico d={I.camera} s={14} c={C.ink} w={2} />
           </div>
           <input type="file" accept="image/*" onChange={pickPhoto}
-            style={{ position: 'absolute', width: 1, height: 1,
-              opacity: 0 }} />
+            style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }} />
         </label>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...T.h1, fontSize: 23 }}>{profile?.name || 'You'}</div>
-          <div style={{ ...T.small, marginTop: 4 }}>
-            {profile?.race_division || 'Open'}
-            {profile?.created_at &&
-              ` · since ${new Date(profile.created_at)
-                .toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`}
-          </div>
+
+        <div style={{ ...T.h1, fontSize: 26, marginTop: 14 }}>
+          {profile?.name || 'You'}
+        </div>
+        <div style={{ ...T.small, marginTop: 4 }}>
+          {profile?.email || ''}
+        </div>
+
+        <div style={{ display: 'flex', gap: 9, justifyContent: 'center',
+          marginTop: 16 }}>
+          <Pill onClick={onBlocks}>
+            {profile?.programme_name || 'My block'}
+          </Pill>
+          <Pill onClick={onRaces}>My races</Pill>
         </div>
       </div>
 
-      {/* ---- the two numbers that matter ---- */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
-        marginTop: 20 }}>
+      {/* ---- where you're at ---- */}
+      <Section title="WHERE YOU'RE AT" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <Card style={{ padding: 15 }}>
           <Label>SALUS SCORE</Label>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4,
@@ -158,16 +150,17 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
         </Card>
       </div>
 
-      {/* ---- numbers or paces ---- */}
+      {/* ---- the numbers ---- */}
+      <Section title="YOUR NUMBERS" />
       <div style={{ display: 'flex', background: C.card2, borderRadius: 999,
-        padding: 4, marginTop: 22 }}>
-        {[['numbers', `Tests ${done + (half?.total ? 1 : 0)}/8`], ['paces', 'Paces'],
-          ['score', 'Score']].map(([k, l]) => {
+        padding: 4 }}>
+        {[['numbers', `Tests ${done + (half?.total ? 1 : 0)}/9`],
+          ['paces', 'Paces'], ['score', 'Where to work']].map(([k, l]) => {
           const on = tab === k
           return (
             <button key={k} onClick={() => setTab(k)}
               style={{ flex: 1, border: 'none', borderRadius: 999,
-                padding: '10px 0', fontSize: 13.5, fontWeight: 700,
+                padding: '10px 0', fontSize: 13, fontWeight: 700,
                 cursor: 'pointer', fontFamily: F,
                 background: on ? C.ink : 'transparent',
                 color: on ? C.bg : C.sub }}>{l}</button>
@@ -177,7 +170,7 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
 
       {tab === 'numbers' && (
         <>
-          <Card style={{ padding: '3px 15px', marginTop: 14 }}>
+          <Card style={{ padding: '3px 15px', marginTop: 12 }}>
             {BM.map((b, i) => {
               const v = benchmarks[b.key]
               const filled = has(b)
@@ -203,10 +196,6 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
               )
             })}
 
-            {/* The half isn't a benchmark — it's a session, stored with
-                its splits. But it's the sixth thing on the testing list
-                and a member looking for it looks here, so it gets a row
-                that opens the real thing. */}
             <div onClick={onHalf} style={{ display: 'flex',
               alignItems: 'center', gap: 12, padding: '15px 0',
               cursor: 'pointer', borderTop: `1px solid ${C.line}` }}>
@@ -214,11 +203,6 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
                 <div style={{ fontSize: 15.5,
                   fontWeight: half?.total ? 600 : 500,
                   color: half?.total ? C.ink : C.sub }}>The Salus Half</div>
-                <div style={{ ...T.small, fontSize: 12, marginTop: 3 }}>
-                  {half?.total
-                    ? 'Run it again any time — the newest one counts.'
-                    : 'Four runs, four stations. Turns the estimate into a projection.'}
-                </div>
               </div>
               <div style={{ fontSize: 17, fontWeight: 800, ...T.num,
                 color: half?.total ? C.ink : C.mute }}>
@@ -230,16 +214,12 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
 
           {si && (
             <Card style={{ marginTop: 10, background: C.card2 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 700 }}>
-                    Strength index {si.toFixed(2)}×
-                  </div>
-                  <div style={{ ...T.small, fontSize: 12.5, marginTop: 3 }}>
-                    Your squat as a multiple of what you weigh. Around 1.5 is
-                    where the sleds stop being the problem.
-                  </div>
-                </div>
+              <div style={{ fontSize: 14.5, fontWeight: 700 }}>
+                Strength index {si.toFixed(2)}×
+              </div>
+              <div style={{ ...T.small, fontSize: 12.5, marginTop: 3 }}>
+                Your squat as a multiple of what you weigh. Around 1.5 is
+                where the sleds stop being the problem.
               </div>
             </Card>
           )}
@@ -247,11 +227,7 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
       )}
 
       {tab === 'paces' && (
-        <div style={{ marginTop: 14 }}>
-          {/* The easy runs are governed by heart rate rather than pace,
-              so the zone belongs here rather than buried in settings.
-              One number — the year — because Maffetone only needs an
-              age and storing less is the right default. */}
+        <div style={{ marginTop: 12 }}>
           <Card>
             <Label>YOUR AEROBIC ZONE</Label>
             {zone ? (
@@ -269,8 +245,8 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
                 <div style={{ ...T.small, fontSize: 12.5, marginTop: 8,
                   lineHeight: 1.55 }}>
                   180 minus {zone.age}, five beats either side. Ten in the
-                  heat. Every easy run and every long run sits in here — if
-                  you can't hold a conversation, walk until you can.
+                  heat. Every easy run sits in here — if you can't hold a
+                  conversation, walk until you can.
                 </div>
               </>
             ) : (
@@ -279,87 +255,79 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
                   Your easy runs are set by heart rate, not pace. One number
                   and the app can work it out.
                 </div>
-                <div style={{ display: 'flex', gap: 9, marginTop: 14 }}>
-                  <input inputMode="numeric" placeholder="Birth year, e.g. 1991"
-                    onKeyDown={async e => {
-                      if (e.key !== 'Enter') return
-                      const y = Number(e.currentTarget.value)
-                      if (y > 1920 && y < 2015) {
-                        await setBirthYear(userId, y)
-                        onUpdate({ birth_year: y })
-                        getAerobicZone(userId).then(setZone)
-                      }
-                    }}
-                    style={{ flex: 1, background: C.card2, color: C.ink,
-                      border: `1px solid ${C.line}`, borderRadius: 12,
-                      padding: '13px 15px', fontSize: 16, outline: 'none',
-                      fontFamily: F }} />
-                </div>
+                <input inputMode="numeric" placeholder="Birth year, e.g. 1991"
+                  onKeyDown={async e => {
+                    if (e.key !== 'Enter') return
+                    const y = Number(e.currentTarget.value)
+                    if (y > 1920 && y < 2015) {
+                      await setBirthYear(userId, y)
+                      onUpdate({ birth_year: y })
+                      getAerobicZone(userId).then(setZone)
+                    }
+                  }}
+                  style={{ width: '100%', background: C.card2, color: C.ink,
+                    border: `1px solid ${C.line}`, borderRadius: 12,
+                    padding: '13px 15px', fontSize: 16, outline: 'none',
+                    fontFamily: F, marginTop: 14 }} />
               </>
             )}
           </Card>
-
-          <div style={{ marginTop: 14 }}>
+          <div style={{ marginTop: 12 }}>
             <Paces fivekSeconds={benchmarks?.fivek?.value_s} compact={false} />
           </div>
-          {!benchmarks?.fivek && (
-            <Card style={{ marginTop: 10 }}>
-              <div style={{ ...T.small }}>
-                Put your 5km in and every pace in the block is worked out from it.
-              </div>
-            </Card>
-          )}
         </div>
       )}
 
       {tab === 'score' && (
-        <div style={{ marginTop: 14 }}>
-          {/* Three pillars rather than one number. Where the gap is
-              matters more than where the average is — a race has to be
-              got through in full, so the weakest part costs more than
-              the strongest gains. */}
+        <div style={{ marginTop: 12 }}>
           <Pillars userId={userId} />
         </div>
       )}
 
-      {/* ---- where to go ---- */}
-      <Label style={{ margin: '28px 0 11px' }}>YOUR TRAINING</Label>
+      {/* ---- training ---- */}
+      <Section title="TRAINING" />
       <Card style={{ padding: '3px 15px' }}>
-        <Row icon={I.list}  label="Blocks"
-          sub="What else the coaches are running" onClick={onBlocks} />
-        <Row icon={I.cal}   label="My races"
-          sub="What's booked, and how the done ones went" onClick={onRaces} top />
         <Row icon={I.chart} label="Progress"
-          sub="Every movement, and whether it's going up" onClick={onProgress} top />
-        <Row icon={I.msg}   label="Ask a coach"
+          sub="Every movement, and whether it's going up" onClick={onProgress} />
+        <Row icon={I.msg} label="Ask a coach"
           sub="Loads, swaps, a session you had to miss" onClick={onCoaches} top />
       </Card>
 
-      {/* ---- settings ---- */}
-      <Label style={{ margin: '28px 0 11px' }}>SETTINGS</Label>
+      {/* ---- display ---- */}
+      <Section title="DISPLAY" />
       <Card style={{ padding: '3px 15px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 13,
           padding: '15px 0' }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15.5, fontWeight: 600 }}>
-              Show me on the board
-            </div>
+            <div style={{ fontSize: 15.5, fontWeight: 600 }}>Units</div>
             <div style={{ ...T.small, fontSize: 12.5, marginTop: 3 }}>
-              Your name and numbers, to everyone else training here.
+              Showing {profile?.units === 'imperial'
+                ? 'lb and miles' : 'kg and km'}
             </div>
           </div>
-          <button onClick={() => onUpdate({
-              share_on_leaderboard: !profile?.share_on_leaderboard })}
-            style={{ width: 46, height: 28, borderRadius: 999, border: 'none',
-              flexShrink: 0, cursor: 'pointer', padding: 3, display: 'flex',
-              justifyContent: profile?.share_on_leaderboard
-                ? 'flex-end' : 'flex-start',
-              background: profile?.share_on_leaderboard ? C.g : C.card3,
-              transition: 'all .18s' }}>
-            <div style={{ width: 22, height: 22, borderRadius: 999,
-              background: profile?.share_on_leaderboard ? C.bg : C.mute }} />
-          </button>
+          <Segment value={profile?.units || 'metric'}
+            options={[['metric', 'Metric'], ['imperial', 'Imperial']]}
+            onChange={v => onUpdate({ units: v })} />
         </div>
+
+        <Toggle top label="Keep the screen on"
+          sub="Stops your phone sleeping between sets. You'll still be able to lock it yourself."
+          on={profile?.keep_awake !== false}
+          onChange={v => onUpdate({ keep_awake: v })} />
+
+        <Toggle top label="Timer sounds"
+          sub="A beep at the end of a round. Right in an empty gym, less so in a class."
+          on={!!profile?.timer_sounds}
+          onChange={v => onUpdate({ timer_sounds: v })} />
+      </Card>
+
+      {/* ---- account ---- */}
+      <Section title="ACCOUNT" />
+      <Card style={{ padding: '3px 15px' }}>
+        <Toggle label="Show me on the board"
+          sub="Your name and your numbers, to everyone else training here."
+          on={!!profile?.share_on_leaderboard}
+          onChange={v => onUpdate({ share_on_leaderboard: v })} />
 
         {profile?.role === 'admin' && (
           <Row icon={I.lock} label="Back office"
@@ -371,7 +339,7 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
       <button onClick={() => supabase.auth.signOut()}
         style={{ width: '100%', background: 'transparent', border: 'none',
           color: C.mute, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-          fontFamily: F, padding: '24px 0 0' }}>Sign out</button>
+          fontFamily: F, padding: '26px 0 0' }}>Sign out</button>
 
       {pad && (
         <Keypad label={pad.b.unit || 'time'} value={pad.value} time={pad.b.time}
@@ -381,6 +349,19 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
     </div>
   )
 }
+
+const Section = ({ title }) => (
+  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.14em',
+    color: C.mute, margin: '30px 0 11px' }}>{title}</div>
+)
+
+const Pill = ({ children, onClick }) => (
+  <button onClick={onClick} style={{ background: 'transparent',
+    border: `1px solid ${C.line}`, borderRadius: 999, padding: '11px 20px',
+    fontSize: 14, fontWeight: 600, color: C.ink, cursor: 'pointer',
+    fontFamily: F, maxWidth: 170, overflow: 'hidden',
+    textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{children}</button>
+)
 
 const Row = ({ icon, label, sub, onClick, top }) => (
   <div onClick={onClick} style={{ display: 'flex', alignItems: 'center',
@@ -392,5 +373,40 @@ const Row = ({ icon, label, sub, onClick, top }) => (
       <div style={{ ...T.small, fontSize: 12.5, marginTop: 3 }}>{sub}</div>
     </div>
     <Ico d={I.chev} s={13} c={C.mute} w={2} />
+  </div>
+)
+
+const Toggle = ({ label, sub, on, onChange, top }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 13,
+    padding: '15px 0', borderTop: top ? `1px solid ${C.line}` : 'none' }}>
+    <div style={{ flex: 1 }}>
+      <div style={{ fontSize: 15.5, fontWeight: 600 }}>{label}</div>
+      <div style={{ ...T.small, fontSize: 12.5, marginTop: 3,
+        lineHeight: 1.5 }}>{sub}</div>
+    </div>
+    <button onClick={() => onChange(!on)}
+      style={{ width: 46, height: 28, borderRadius: 999, border: 'none',
+        flexShrink: 0, cursor: 'pointer', padding: 3, display: 'flex',
+        justifyContent: on ? 'flex-end' : 'flex-start',
+        background: on ? C.g : C.card3, transition: 'all .18s' }}>
+      <div style={{ width: 22, height: 22, borderRadius: 999,
+        background: on ? C.bg : C.mute }} />
+    </button>
+  </div>
+)
+
+const Segment = ({ value, options, onChange }) => (
+  <div style={{ display: 'flex', background: C.card2, borderRadius: 999,
+    padding: 3, flexShrink: 0 }}>
+    {options.map(([k, l]) => {
+      const on = value === k
+      return (
+        <button key={k} onClick={() => onChange(k)}
+          style={{ border: 'none', borderRadius: 999, padding: '8px 14px',
+            fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: F,
+            background: on ? C.card3 : 'transparent',
+            color: on ? C.ink : C.mute }}>{l}</button>
+      )
+    })}
   </div>
 )
