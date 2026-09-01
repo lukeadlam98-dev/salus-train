@@ -28,7 +28,7 @@ const TESTS = [
     fmt: v => fmt(v.value_s) },
   { key: 'row',      label: '1,000m Row',         why: 'Station five, fresh.',
     fmt: v => fmt(v.value_s) },
-  { key: 'wallball', label: 'Wall balls',         why: 'Max unbroken. Decides how the last station goes.',
+  { key: 'wallball', label: 'Wall balls unbroken', why: 'How many before you put the ball down. Decides how the last station goes.',
     fmt: v => `${v.value_num} reps` },
 ]
 

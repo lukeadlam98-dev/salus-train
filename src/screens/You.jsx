@@ -17,7 +17,7 @@ const BM = [
   { key: 'fivek',    name: '5km',                time: true, ph: '24:00' },
   { key: 'ski',      name: '1,000m SkiErg',      time: true, ph: '4:00' },
   { key: 'row',      name: '1,000m Row',         time: true, ph: '3:45' },
-  { key: 'wallball', name: 'Wall balls',         unit: 'reps', ph: '50' },
+  { key: 'wallball', name: 'Wall balls unbroken', unit: 'reps', ph: '50' },
 ]
 
 // Me.

@@ -9,8 +9,18 @@ export function Save({ value, onSave, placeholder, rows, style, big }) {
   const [state, setState] = useState('idle')
   const timer = useRef(null)
   const first = useRef(true)
+  const focused = useRef(false)
 
-  useEffect(() => { setV(value ?? '') }, [value])
+  // Don't overwrite what someone is typing.
+  //
+  // The field autosaves after 550ms, the parent reloads, and the value
+  // prop comes back — which used to reset the input to whatever had
+  // been saved, losing anything typed in between. Which reads as the
+  // field fighting you.
+  useEffect(() => {
+    if (focused.current) return
+    setV(value ?? '')
+  }, [value])
   useEffect(() => {
     if (first.current) { first.current = false; return }
     if ((value ?? '') === v) return
@@ -30,13 +40,24 @@ export function Save({ value, onSave, placeholder, rows, style, big }) {
     fontSize: big ? 16 : 14, outline: 'none', fontFamily: F,
     lineHeight: 1.5, transition: 'border-color .3s', ...style,
   }
+  const focus = {
+    onFocus: e => {
+      focused.current = true
+      // Select what's there, so typing replaces rather than appends.
+      // Same reason the number pad does it: correcting a field
+      // shouldn't need clearing it first.
+      requestAnimationFrame(() => e.target.select?.())
+    },
+    onBlur: () => { focused.current = false },
+  }
+
   return (
     <div style={{ position: 'relative' }}>
       {rows
-        ? <textarea value={v} placeholder={placeholder} rows={rows}
+        ? <textarea value={v} placeholder={placeholder} rows={rows} {...focus}
             onChange={e => setV(e.target.value)}
             style={{ ...base, resize: 'vertical' }} />
-        : <input value={v} placeholder={placeholder}
+        : <input value={v} placeholder={placeholder} {...focus}
             onChange={e => setV(e.target.value)} style={base} />}
       {state !== 'idle' && (
         <span style={{ position: 'absolute', right: 9, top: big ? 13 : 10,
