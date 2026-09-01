@@ -6,9 +6,13 @@ import { Card, Label } from '../components/ui'
 // Where you actually are, in three parts.
 //
 // A single score tells you where you rank. It doesn't tell you what to
-// do on Monday. Three do — and the gap between them is the whole
-// answer, because HYROX rewards the athlete with no weakness far more
-// than the one with a standout strength.
+// do on Monday. Two do — and the gap between them is the whole answer,
+// because HYROX rewards the athlete with no weakness far more than the
+// one with a standout strength.
+//
+// The stations aren't scored. Measuring them properly needs the sled
+// at race weight and a consistent target height, and a test nobody can
+// repeat the same way twice is worse than no test at all.
 //
 // Everything is relative to bodyweight. An 80kg member pressing 60 is
 // in better shape for eight kilometres of running than a 110kg member
@@ -24,11 +28,6 @@ const ADVICE = {
     low:  'This is where the time is. Eight kilometres is most of a HYROX and running is the cheapest thing to improve — add easy volume before anything else.',
     mid:  'Solid. The intervals are what turn this into race pace rather than just fitness.',
     high: 'Strong. Don\u2019t let it slip while you chase the other two.',
-  },
-  Stations: {
-    low:  'Technique, not fitness. Ten minutes on sled position and wall ball rhythm is worth more than another session.',
-    mid:  'Fine. The gains left here are in transitions and pacing rather than capacity.',
-    high: 'The stations won\u2019t be what costs you. Spend the time running.',
   },
 }
 
@@ -141,13 +140,13 @@ export default function Pillars({ userId }) {
           <div style={{ ...T.body, fontSize: 14, marginTop: 9,
             lineHeight: 1.6 }}>
             {spread < 12 ? (
-              <>You're even across all three at around {overall}. That's the
+              <>You're even across both at around {overall}. That's the
               profile a HYROX rewards — no weakness to fall through. Push
-              everything up together rather than chasing one.</>
+              both up together rather than chasing one.</>
             ) : (
               <>Your {weakest.pillar.toLowerCase()} is {spread} points behind
               your best. In a race that gap costs more than your strongest
-              area gains, because every station has to be got through
+              area gains, because the whole thing has to be got through
               regardless. {weakest.weakest
                 ? `Start with the ${weakest.weakest.toLowerCase()}.` : ''}</>
             )}

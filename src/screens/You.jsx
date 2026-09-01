@@ -21,8 +21,6 @@ const BM = [
   { key: 'fivek',    name: '5km',                time: true, ph: '24:00' },
   { key: 'ski',      name: '1,000m SkiErg',      time: true, ph: '4:00' },
   { key: 'row',      name: '1,000m Row',         time: true, ph: '3:45' },
-  { key: 'sled',     name: 'Sled push 50m',      time: true, ph: '0:48' },
-  { key: 'wallball', name: 'Wall balls',         unit: 'reps', ph: '50' },
 ]
 
 // Me.
@@ -163,7 +161,7 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
       {/* ---- numbers or paces ---- */}
       <div style={{ display: 'flex', background: C.card2, borderRadius: 999,
         padding: 4, marginTop: 22 }}>
-        {[['numbers', `Tests ${done + (half?.total ? 1 : 0)}/10`], ['paces', 'Paces'],
+        {[['numbers', `Tests ${done + (half?.total ? 1 : 0)}/8`], ['paces', 'Paces'],
           ['score', 'Score']].map(([k, l]) => {
           const on = tab === k
           return (
