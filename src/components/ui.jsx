@@ -230,3 +230,34 @@ export const page = {
   minHeight: '100%', maxWidth: 520, margin: '0 auto',
   padding: '46px 16px', paddingBottom: FLOAT.clear,
 }
+
+
+// A little "i" that opens an explanation.
+//
+// Numbers like a strength index earn their place on screen but not the
+// three lines it takes to say what they mean. This keeps the
+// explanation one tap away rather than either cluttering the card or
+// leaving people guessing.
+export function Info({ title, children }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button onClick={e => { e.stopPropagation(); setOpen(true) }}
+        style={{ width: 18, height: 18, borderRadius: 999, flexShrink: 0,
+          border: `1px solid ${C.card3}`, background: 'transparent',
+          color: C.mute, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          fontFamily: F, display: 'grid', placeItems: 'center',
+          padding: 0, lineHeight: 1 }}>i</button>
+      {open && (
+        <Sheet onClose={() => setOpen(false)}>
+          <div style={{ ...T.h2 }}>{title}</div>
+          <div style={{ ...T.body, marginTop: 12, lineHeight: 1.65 }}>
+            {children}
+          </div>
+          <Btn tone="soft" style={{ marginTop: 22 }}
+            onClick={() => setOpen(false)}>Got it</Btn>
+        </Sheet>
+      )}
+    </>
+  )
+}

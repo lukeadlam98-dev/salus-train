@@ -138,3 +138,17 @@ html, body, #root { overflow-x: hidden; max-width: 100vw; }
 /* Scrollers keep their own overflow, without a visible bar. */
 .nb { -ms-overflow-style: none; scrollbar-width: none; overscroll-behavior-x: contain; }
 .nb::-webkit-scrollbar { display: none; }
+
+/* The mark on the splash. Slow enough to read as breathing rather
+   than blinking. */
+@keyframes breathe {
+  0%, 100% { opacity: .45; transform: scale(.96) }
+  50%      { opacity: 1;   transform: scale(1) }
+}
+
+/* A bar that fills from empty on arrival, rather than appearing
+   already full. The number was always there; showing it move is what
+   makes progress feel like progress. */
+@keyframes fill {
+  from { width: 0 }
+}

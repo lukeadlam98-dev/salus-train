@@ -163,7 +163,11 @@ export default function App() {
     }}>{children}</div>
   )
 
-  if (!ready) return <div style={{ minHeight: '100dvh', background: '#0B0A09' }} />
+  // A dark rectangle then the whole app at once is the flash. Showing
+  // the mark while auth and the profile resolve gives the eye
+  // something to hold, and means the app appears to arrive rather than
+  // to blink.
+  if (!ready) return <Splash />
   if (!session) return <Shell><Auth cfg={cfg} linkErr={linkErr}
     clearLinkErr={() => setLinkErr(null)} /></Shell>
 
@@ -171,7 +175,7 @@ export default function App() {
   if (recovery) return (
     <Shell><SetPassword cfg={cfg} onDone={() => setRecovery(false)} /></Shell>
   )
-  if (!profile) return <Shell><SkeletonToday /></Shell>
+  if (!profile) return <Splash />
 
   /* ---------- back office ---------- */
   // Deliberately outside Shell: the member layout is phone-width, and
@@ -354,4 +358,34 @@ function Keep({ on, children }) {
   useEffect(() => { if (on) setSeen(true) }, [on])
   if (!seen) return null
   return <div style={{ display: on ? 'block' : 'none' }}>{children}</div>
+}
+
+// The first second.
+//
+// Deliberately not a spinner. A spinner says "something is wrong and
+// we are trying"; a mark that breathes says "this is loading", which
+// is the truth and reads calmer.
+function Splash() {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: '#090908',
+      display: 'grid', placeItems: 'center',
+    }}>
+      <div style={{ animation: 'breathe 2.2s ease-in-out infinite' }}>
+        <svg width="54" height="54" viewBox="0 0 40 40">
+          {Array.from({ length: 20 }).map((_, i) => {
+            const a = (i / 20) * Math.PI * 2 - Math.PI / 2
+            const inner = i % 2 === 0 ? 7 : 9.5
+            const outer = i % 2 === 0 ? 18 : 15
+            return (
+              <line key={i}
+                x1={20 + Math.cos(a) * inner} y1={20 + Math.sin(a) * inner}
+                x2={20 + Math.cos(a) * outer} y2={20 + Math.sin(a) * outer}
+                stroke="#F6F3EE" strokeWidth="2.2" strokeLinecap="round" />
+            )
+          })}
+        </svg>
+      </div>
+    </div>
+  )
 }

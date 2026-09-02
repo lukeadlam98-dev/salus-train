@@ -668,3 +668,27 @@ export async function getPillars(userId) {
   const { data } = await supabase.rpc('my_pillars', { p_user: userId })
   return data || []
 }
+
+// The week's running in one query — for the Train screen, so a member
+// can see the shape of it without opening five sessions.
+export async function getRunningWeek() {
+  const { data } = await supabase.from('my_running_week').select('*')
+  return data || []
+}
+
+// What it would take to move up a band. "Your strength is 62" is a
+// grade; "a 132kg squat puts you in the next band" is an instruction.
+export async function getTargets(userId) {
+  const { data } = await supabase.rpc('my_targets', { p_user: userId })
+  return data || []
+}
+
+/* ---------------- badges ---------------- */
+// Recomputed on load rather than fired on events. An event that
+// misfires loses a badge silently; a query that runs again fixes
+// itself.
+export async function getBadges(userId) {
+  await supabase.rpc('award_badges', { p_user: userId }).catch(() => {})
+  const { data } = await supabase.from('my_badges').select('*').order('ord')
+  return data || []
+}

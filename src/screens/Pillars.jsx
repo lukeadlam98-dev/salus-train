@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { C, T, F } from '../lib/theme'
-import { getPillars } from '../lib/data'
-import { Card, Label } from '../components/ui'
+import { fmt } from '../lib/format'
+import { getPillars, getTargets } from '../lib/data'
+import { Card, Label, Ico, I, Sheet, Btn } from '../components/ui'
 
 // Where you actually are, in three parts.
 //
 // A single score tells you where you rank. It doesn't tell you what to
-// do on Monday. Two do — and the gap between them is the whole answer,
+// do on Monday. Four do — and the gap between them is the whole answer,
 // because HYROX rewards the athlete with no weakness far more than the
 // one with a standout strength.
 //
@@ -24,24 +25,39 @@ import { Card, Label } from '../components/ui'
 // pressing 70, and an absolute number says the opposite.
 
 const ADVICE = {
-  Strength: {
-    low:  'The sleds and the lunges will be the thing that ends your race. Two strength sessions a week, and stay with them — this moves slowly but it moves.',
-    mid:  'Enough to get round. More would help the sleds, but not at the cost of running.',
-    high: 'Well ahead of what the race asks. Any more is spent effort — put it into the engine.',
+  Lower: {
+    low:  'The sleds, the lunges and the last two kilometres all come out of here. Two lower sessions a week and stay with them — this moves slowly but it moves.',
+    mid:  'Enough to get round. More would help the sleds, though not at the cost of running.',
+    high: 'Well ahead of what the racing asks. Any more is spent effort — put it into the engine.',
+  },
+  Upper: {
+    low:  'Pulling is usually the gap. Carries, rows and pull-ups three times a week, and the farmers carry stops being the thing that ends your race.',
+    mid:  'Solid. Grip is the part that fails first, so keep the carries heavy rather than long.',
+    high: 'Strong. Nothing overhead or hanging will be what costs you.',
   },
   Engine: {
-    low:  'This is where the time is. Eight kilometres is most of a HYROX and running is the cheapest thing to improve — add easy volume before anything else.',
-    mid:  'Solid. The intervals are what turn this into race pace rather than just fitness — and if the wall balls are the low one here, that\u2019s a breathing problem, not a shoulder one.',
-    high: 'Strong. Don\u2019t let it slip while you chase the other two.',
+    low:  'This is where the time is. Eight kilometres is most of a race and running is the cheapest thing to improve — add easy volume before anything else.',
+    mid:  'Solid. The intervals are what turn this into race pace rather than just fitness.',
+    high: 'Strong. Don\u2019t let it slip while you chase the others.',
+  },
+  Speed: {
+    low:  'You have one gear. That is fine until somebody goes past you on the last run and you cannot answer. The Monday ladder is exactly this.',
+    mid:  'Enough to change pace when you need to.',
+    high: 'Quick. Speed holds better than fitness does, so this can tick over while you build elsewhere.',
   },
 }
 
 export default function Pillars({ userId }) {
   const [rows, setRows] = useState([])
+  const [targets, setTargets] = useState([])
   const [ready, setReady] = useState(false)
+  const [info, setInfo] = useState(null)
 
   useEffect(() => {
-    getPillars(userId).then(setRows).finally(() => setReady(true))
+    Promise.all([
+      getPillars(userId).then(setRows),
+      getTargets(userId).then(setTargets).catch(() => {}),
+    ]).finally(() => setReady(true))
   }, [userId])
 
   if (!ready) return null
@@ -59,11 +75,18 @@ export default function Pillars({ userId }) {
 
   const overall = Math.round(
     scored.reduce((a, r) => a + Number(r.score), 0) / scored.length)
-  const weakest = [...scored].sort((a, b) => a.score - b.score)[0]
   const spread = scored.length > 1
     ? Math.round(Math.max(...scored.map(r => r.score)) -
                  Math.min(...scored.map(r => r.score)))
     : 0
+
+  // A weakness has to be a real gap. Marking the lower of 70 and 72 as
+  // WEAKEST is technically true and useless — it tells someone their
+  // best thing is their problem, which is how a member stops trusting
+  // the screen.
+  const weakest = spread >= 10
+    ? [...scored].sort((a, b) => a.score - b.score)[0]
+    : null
 
   return (
     <>
@@ -71,7 +94,7 @@ export default function Pillars({ userId }) {
       {rows.map(r => {
         const v = r.score == null ? null : Number(r.score)
         const band = v == null ? null : v < 45 ? 'low' : v < 72 ? 'mid' : 'high'
-        const isWeak = weakest && r.pillar === weakest.pillar && scored.length > 1
+        const isWeak = weakest && r.pillar === weakest.pillar
 
         return (
           <Card key={r.pillar} style={{ marginBottom: 10,
@@ -103,19 +126,33 @@ export default function Pillars({ userId }) {
             </div>
 
             {/* what's inside it */}
+            {/* Each test, with what it would take to move up. A score
+                is a grade; a number on the bar is an instruction. */}
             {r.detail && (
-              <div style={{ display: 'flex', gap: 14, marginTop: 11,
-                flexWrap: 'wrap' }}>
+              <div style={{ marginTop: 12 }}>
                 {Object.entries(r.detail)
                   .filter(([, val]) => val != null)
-                  .map(([k, val]) => (
-                    <div key={k} style={{ display: 'flex', alignItems: 'baseline',
-                      gap: 5 }}>
-                      <span style={{ fontSize: 11.5, color: C.mute }}>{k}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700,
-                        ...T.num }}>{val}</span>
-                    </div>
-                  ))}
+                  .map(([k, val], n) => {
+                    const t = targets.find(x => x.label === k)
+                    return (
+                      <div key={k} style={{ display: 'flex',
+                        alignItems: 'center', gap: 10, padding: '8px 0',
+                        borderTop: n ? `1px solid ${C.line}` : 'none' }}>
+                        <div style={{ width: 24, fontSize: 13, fontWeight: 800,
+                          ...T.num, color: val < 45 ? C.sub : C.ink }}>{val}</div>
+                        <div style={{ flex: 1, fontSize: 13 }}>{k}</div>
+                        {t?.next_value && t?.next_band && (
+                          <div style={{ fontSize: 12, color: C.mute }}>
+                            {t.unit === 'time'
+                              ? fmt(Number(t.next_value))
+                              : `${Math.round(Number(t.next_value))}${
+                                  t.unit === 'kg' ? 'kg' : ''}`}
+                            {' '}for {t.next_band}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
               </div>
             )}
 
@@ -145,9 +182,9 @@ export default function Pillars({ userId }) {
           <div style={{ ...T.body, fontSize: 14, marginTop: 9,
             lineHeight: 1.6 }}>
             {spread < 12 ? (
-              <>You're even across both at around {overall}. That's the
-              profile a HYROX rewards — no weakness to fall through. Push
-              both up together rather than chasing one.</>
+              <>You're even across all four at around {overall}. That's the
+              profile hybrid racing rewards — no weakness to fall
+              through. Push them up together rather than chasing one.</>
             ) : (
               <>Your {weakest.pillar.toLowerCase()} is {spread} points behind
               your best. In a race that gap costs more than your strongest

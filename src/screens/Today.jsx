@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { C, T } from '../lib/theme'
 import { DAYS, daysUntil } from '../lib/format'
 import { getSessions, getWeekOutline, getCompletions, getCoaches,
-         getWeekDone } from '../lib/data'
+         getWeekDone, getRunningWeek } from '../lib/data'
 import { Card, Label, Ico, I, page } from '../components/ui'
 import Rearrange from './Rearrange'
 import SessionCard from '../components/SessionCard'
@@ -21,6 +21,7 @@ export default function Today({ profile, week, programme, half, onOpen,
   const [completions, setCompletions] = useState({})
   const [coaches, setCoaches] = useState([])
   const [done, setDone] = useState(0)
+  const [running, setRunning] = useState([])
 
   useEffect(() => {
     if (!week) { setReady(true); return }
@@ -36,6 +37,7 @@ export default function Today({ profile, week, programme, half, onOpen,
         setOutline(o); setCompletions(c); setDone(d)
       }),
       getCoaches().then(setCoaches).catch(() => {}),
+      getRunningWeek().then(setRunning).catch(() => {}),
     ]).finally(() => setReady(true))
     // Keyed on the id, not the object. App re-renders on every profile
     // patch, and depending on `week` itself meant a fresh object could

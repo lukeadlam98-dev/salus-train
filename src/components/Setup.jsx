@@ -14,22 +14,22 @@ import { Ico, I, Sheet, Btn } from './ui'
 // makes it a nudge rather than nagging.
 
 const TESTS = [
-  { key: 'bw',       label: 'Bodyweight',         why: 'Everything relative is worked out from it.',
+  { key: 'bw',          label: 'Bodyweight',           why: 'Everything relative is worked out from it.',
     fmt: v => `${v.value_num} kg` },
-  { key: 'squat',    label: 'Back squat 3RM',     why: 'Sets every squat, lunge and step-up in the block.',
+  { key: 'squat',       label: 'Back squat 3RM',       why: 'Sets every squat, lunge and step-up in the block.',
     fmt: v => `${v.value_num} kg` },
-  { key: 'deadlift', label: 'Deadlift 5RM',       why: 'Sets the pulls.',
+  { key: 'deadlift',    label: 'Deadlift 3RM',         why: 'Sets the pulls and the sled.',
     fmt: v => `${v.value_num} kg` },
-  { key: 'press',    label: 'Shoulder press 1RM', why: 'Sets the overhead work.',
+  { key: 'press',       label: 'Strict press 3RM',     why: 'Sets everything overhead.',
     fmt: v => `${v.value_num} kg` },
-  { key: 'fivek',    label: '5km',                why: 'Sets every running pace, and half the projection.',
+  { key: 'pullup',      label: 'Weighted pull-up 3RM', why: 'Bodyweight plus anything added. The pulling side nothing else measures.',
+    fmt: v => `${v.value_num} kg` },
+  { key: 'fivek',       label: '5km',                  why: 'Sets every running pace, and half the projection.',
     fmt: v => fmt(v.value_s) },
-  { key: 'ski',      label: '1,000m SkiErg',      why: 'Station one, and a read on your engine.',
+  { key: 'row',         label: '2,000m Row',           why: 'The hybrid benchmark. Threshold, not a sprint.',
     fmt: v => fmt(v.value_s) },
-  { key: 'row',      label: '1,000m Row',         why: 'Station five, fresh.',
+  { key: 'fourhundred', label: '400m',                 why: 'Flat out. The one that says whether you have anything left at the end.',
     fmt: v => fmt(v.value_s) },
-  { key: 'wallball', label: 'Wall balls unbroken', why: 'How many before you put the ball down. Decides how the last station goes.',
-    fmt: v => `${v.value_num} reps` },
 ]
 
 const Ring = ({ done, total, size = 38 }) => {

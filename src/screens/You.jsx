@@ -4,20 +4,25 @@ import { C, T, F } from '../lib/theme'
 import { fmt, hhmm } from '../lib/format'
 import { saveBenchmark, getMyScore, setPhoto,
          getAerobicZone, setBirthYear } from '../lib/data'
-import { Card, Label, Btn, Avatar, Ico, I, page } from '../components/ui'
+import { Card, Label, Btn, Avatar, Ico, I, Info, page } from '../components/ui'
 import Paces from './Paces'
 import Pillars from './Pillars'
+import Badges from './Badges'
 import Keypad from '../components/Keypad'
 
+// Nine tests for a hybrid athlete. Four pillars: lower, upper, engine,
+// speed. The pull-up is stored as total load — bodyweight plus
+// anything added — so a strict bodyweight triple is exactly 1.00× and
+// everybody sits on one scale.
 const BM = [
-  { key: 'bw',       name: 'Bodyweight',         unit: 'kg', ph: '80' },
-  { key: 'squat',    name: 'Back squat 3RM',     unit: 'kg', ph: '110' },
-  { key: 'deadlift', name: 'Deadlift 5RM',       unit: 'kg', ph: '130' },
-  { key: 'press',    name: 'Shoulder press 1RM', unit: 'kg', ph: '60' },
-  { key: 'fivek',    name: '5km',                time: true, ph: '24:00' },
-  { key: 'ski',      name: '1,000m SkiErg',      time: true, ph: '4:00' },
-  { key: 'row',      name: '1,000m Row',         time: true, ph: '3:45' },
-  { key: 'wallball', name: 'Wall balls unbroken', unit: 'reps', ph: '50' },
+  { key: 'bw',          name: 'Bodyweight',           unit: 'kg', ph: '80' },
+  { key: 'squat',       name: 'Back squat 3RM',       unit: 'kg', ph: '120' },
+  { key: 'deadlift',    name: 'Deadlift 3RM',         unit: 'kg', ph: '150' },
+  { key: 'press',       name: 'Strict press 3RM',     unit: 'kg', ph: '55' },
+  { key: 'pullup',      name: 'Weighted pull-up 3RM', unit: 'kg', ph: '90' },
+  { key: 'fivek',       name: '5km',                  time: true, ph: '24:00' },
+  { key: 'row',         name: '2,000m Row',           time: true, ph: '7:30' },
+  { key: 'fourhundred', name: '400m',                 time: true, ph: '1:15' },
 ]
 
 // Me.
@@ -116,7 +121,21 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
       <Section title="WHERE YOU'RE AT" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <Card style={{ padding: 15 }}>
-          <Label>SALUS SCORE</Label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <Label>SALUS SCORE</Label>
+            <Info title="The Salus Score">
+              Every test you've done, scored out of a hundred against a fixed
+              standard, then averaged.
+              {'\n\n'}
+              Fixed is the important part. It isn't a ranking against the
+              other members, so it doesn't move when somebody else trains —
+              it only moves when you do. Lifts are scored relative to your
+              bodyweight, times against a standard for your sex.
+              {'\n\n'}
+              Sixty is a solid club-level athlete. Eighty is very good.
+              A hundred is the standard of somebody who podiums.
+            </Info>
+          </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4,
             marginTop: 7 }}>
             <div style={{ fontSize: 31, fontWeight: 900, letterSpacing: '-.045em',
@@ -214,12 +233,31 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
 
           {si && (
             <Card style={{ marginTop: 10, background: C.card2 }}>
-              <div style={{ fontSize: 14.5, fontWeight: 700 }}>
-                Strength index {si.toFixed(2)}×
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <div style={{ fontSize: 14.5, fontWeight: 700 }}>
+                  Strength index {si.toFixed(2)}×
+                </div>
+                <Info title="Strength index">
+                  Your back squat divided by your bodyweight. A 100kg member
+                  squatting 150 has an index of 1.50.
+                  {'\n\n'}
+                  It matters more than the raw number because HYROX is
+                  carrying yourself for eight kilometres with a sled in the
+                  middle. A heavier athlete lifting more isn't necessarily in
+                  better shape for that — the ratio is what predicts whether
+                  the sleds and the lunges will be the thing that ends your
+                  race.
+                  {'\n\n'}
+                  Around 1.5 is where they stop being the problem. Below 1.2
+                  they usually are. Above 1.8 you're carrying strength you
+                  won't use, and the time is better spent running.
+                </Info>
               </div>
-              <div style={{ ...T.small, fontSize: 12.5, marginTop: 3 }}>
-                Your squat as a multiple of what you weigh. Around 1.5 is
-                where the sleds stop being the problem.
+              <div style={{ ...T.small, fontSize: 12.5, marginTop: 4 }}>
+                {si < 1.2 ? 'The sleds and the lunges will be the hard part.'
+                  : si < 1.5 ? 'Enough to get round. More would help the sleds.'
+                  : si < 1.8 ? 'Where you want to be. Hold it and run.'
+                  : 'More than the race asks for. Spend the time running.'}
               </div>
             </Card>
           )}
@@ -283,6 +321,9 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
           <Pillars userId={userId} />
         </div>
       )}
+
+      {/* ---- badges ---- */}
+      <Badges userId={userId} />
 
       {/* ---- training ---- */}
       <Section title="TRAINING" />

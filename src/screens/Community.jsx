@@ -154,10 +154,10 @@ export default function Community({ profile, userId, onCoach }) {
             {pinned.map(n => (
               <button key={n.id} onClick={() => setNotice(n)}
                 style={{ flex: '0 0 auto', maxWidth: 250, display: 'flex',
-                  alignItems: 'center', gap: 8, background: C.card,
-                  border: `1px solid ${C.gLine}`, borderRadius: 999,
-                  padding: '8px 14px', cursor: 'pointer', fontFamily: F }}>
-                <Ico d={I.pin} s={11} c={C.g} w={2.2} />
+                  alignItems: 'center', gap: 8, background: C.card2,
+                  border: 'none', borderRadius: 999,
+                  padding: '9px 15px', cursor: 'pointer', fontFamily: F }}>
+                <Ico d={I.pin} s={11} c={C.sub} w={2.2} />
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: C.ink,
                   overflow: 'hidden', textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap' }}>{n.title}</span>
@@ -226,13 +226,16 @@ export default function Community({ profile, userId, onCoach }) {
           // minutes — the name and avatar only need saying once.
           const grouped = prev && !newDay && prev.user_id === m.user_id &&
             (new Date(m.created_at) - new Date(prev.created_at)) < 5 * 60000
+          const after = msgs[i + 1]
+          const last = !after || after.user_id !== m.user_id ||
+            (new Date(after.created_at) - new Date(m.created_at)) >= 5 * 60000
 
           return (
             <div key={m.id}>
               {newDay && (
                 <div style={{ textAlign: 'center', margin: '18px 0 14px' }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.mute,
-                    background: C.card, borderRadius: 999,
+                    background: 'transparent', letterSpacing: '.06em',
                     padding: '5px 12px' }}>{dayLabel(m.created_at)}</span>
                 </div>
               )}
@@ -265,14 +268,18 @@ export default function Community({ profile, userId, onCoach }) {
                     </div>
                   )}
 
+                  {/* Lighter, and the tail only on the last of a run.
+                      Every bubble having a corner cut made a column of
+                      notches down the screen — the tail should mark
+                      where somebody stopped talking, which is once. */}
                   <div style={{
-                    background: m.mine ? C.g : C.card2,
+                    background: m.mine ? C.g : C.card3,
                     color: m.mine ? C.bg : C.ink,
-                    borderRadius: 16,
-                    borderBottomRightRadius: m.mine && !grouped ? 5 : 16,
-                    borderBottomLeftRadius: !m.mine && !grouped ? 5 : 16,
-                    padding: m.body ? '11px 14px' : 0,
-                    fontSize: 15, lineHeight: 1.45,
+                    borderRadius: 18,
+                    borderBottomRightRadius: m.mine && last ? 6 : 18,
+                    borderBottomLeftRadius: !m.mine && last ? 6 : 18,
+                    padding: m.body ? '12px 15px' : 0,
+                    fontSize: 15.5, lineHeight: 1.5,
                     opacity: m.pending ? .55 : 1,
                     wordBreak: 'break-word',
                     display: m.body || m.deleted ? 'block' : 'none',
@@ -290,11 +297,15 @@ export default function Community({ profile, userId, onCoach }) {
                         borderBottomLeftRadius: m.mine ? 16 : 5 }} />
                   )}
 
-                  <div style={{ fontSize: 10.5, color: C.mute, marginTop: 3,
-                    textAlign: m.mine ? 'right' : 'left', paddingLeft: 3,
-                    paddingRight: 3 }}>
-                    {m.pending ? 'sending' : when(m.created_at)}
-                  </div>
+                  {/* Once per run, not under every line. Six bubbles
+                      from the same person a minute apart don't need six
+                      timestamps. */}
+                  {(last || m.pending) && (
+                    <div style={{ fontSize: 10.5, color: C.mute, marginTop: 4,
+                      textAlign: m.mine ? 'right' : 'left', padding: '0 4px' }}>
+                      {m.pending ? 'sending' : when(m.created_at)}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

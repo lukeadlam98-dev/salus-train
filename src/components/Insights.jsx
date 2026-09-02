@@ -84,18 +84,25 @@ export default function Insights({ days, raceDate, programme, half, prediction,
         </div>
 
         <div style={{ display: 'flex', gap: 3 }}>
+          {/* Each segment fills on arrival rather than appearing full.
+              The number was always there — seeing it move is what makes
+              eight weeks feel like something you're getting through
+              rather than a static fact. */}
           {Array.from({ length: total }).map((_, i) => {
             const past = i < (week ?? 1) - 1
             const now = i === (week ?? 1) - 1
             return (
               <div key={i} style={{ flex: 1, height: 5, borderRadius: 999,
-                background: past ? C.g : C.card3, position: 'relative',
+                background: C.card3, position: 'relative',
                 overflow: 'hidden' }}>
-                {/* the current week fills as the sessions get done */}
-                {now && real.length > 0 && (
+                {(past || (now && real.length > 0)) && (
                   <div style={{ position: 'absolute', inset: 0,
-                    width: `${(done / real.length) * 100}%`, background: C.g,
-                    borderRadius: 999, transition: 'width .4s' }} />
+                    width: past ? '100%'
+                                : `${(done / real.length) * 100}%`,
+                    background: C.g, borderRadius: 999,
+                    animation: `fill .55s cubic-bezier(.2,.8,.3,1) ${
+                      120 + i * 55}ms both`,
+                    transition: 'width .4s' }} />
                 )}
               </div>
             )
