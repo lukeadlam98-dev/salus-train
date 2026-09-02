@@ -217,6 +217,18 @@ export function metresIn(label) {
   return null
 }
 
+// The same distance, times however many of them there are.
+//
+// metresIn deliberately reads "6 \u00d7 100m" as 100 — a pace target is
+// per rep, not for the set. Adding up a session is the other
+// question, and answering it with 100 lost a kilometre of strides.
+export function totalMetresIn(label) {
+  const one = metresIn(label)
+  if (!one) return 0
+  const m = String(label || '').match(/^\s*(\d+)\s*[\u00d7x]\s/i)
+  return one * (m ? Number(m[1]) : 1)
+}
+
 // What this piece should be run at.
 //
 // Reps get rep pace — a 200 is run harder than a 400, which is the

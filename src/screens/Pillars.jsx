@@ -50,6 +50,24 @@ const ADVICE = {
 // The band a score sits in, and its colour. Four steps rather than
 // three, because "fine" and "strong" are different instructions and
 // collapsing them loses the difference between hold it and build it.
+// A test's number in the unit the member thinks in.
+const shown = (t, v) => {
+  if (v == null) return null
+  return t.unit === 'time' ? fmt(Math.round(Number(v)))
+                           : `${Math.round(Number(v))}kg`
+}
+
+// How far there is to go, said in the same unit.
+const gapTo = (t, to) => {
+  if (to == null || t.now_value == null) return null
+  const d = Math.abs(Number(to) - Number(t.now_value))
+  if (d < 1) return null
+  return t.unit === 'time' ? `${fmt(Math.round(d))}` : `${Math.round(d)}kg`
+}
+
+const BAND = { building: 'building', ok: 'ok', good: 'good',
+  great: 'great', elite: 'elite' }
+
 const band = v =>
   v == null ? null
     : v < 45 ? { key: 'low',  label: 'Needs the work', c: C.weak }
@@ -124,10 +142,25 @@ export default function Pillars({ userId }) {
                     marginTop: 3 }}>{b.label}</div>
                 )}
               </div>
-              <div style={{ fontSize: 26, fontWeight: 900,
-                letterSpacing: '-.045em', ...T.num,
-                color: b ? b.c : C.mute }}>
-                {v ?? '—'}
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 26, fontWeight: 900,
+                  letterSpacing: '-.045em', ...T.num,
+                  color: b ? b.c : C.mute }}>
+                  {v ?? '—'}
+                </div>
+                {/* What it was when they started. The card could
+                    never show this before, because every score was
+                    read from week 1 and week 1 only — it was showing
+                    the starting number and calling it current. */}
+                {v != null && r.first_score != null &&
+                  Math.round(v - r.first_score) !== 0 && (
+                  <div style={{ fontSize: 11.5, fontWeight: 700,
+                    ...T.num, marginTop: 2,
+                    color: v > r.first_score ? C.best : C.mute }}>
+                    {v > r.first_score ? '+' : ''}
+                    {Math.round(v - r.first_score)} from {Math.round(r.first_score)}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -140,6 +173,14 @@ export default function Pillars({ userId }) {
                   borderRadius: 999,
                   animation: `fill .9s cubic-bezier(.16,.9,.3,1) both` }} />
               )}
+              {/* A notch where they started, so the distance covered
+                  is visible rather than asserted. */}
+              {v != null && r.first_score != null &&
+                r.first_score < v && (
+                <div style={{ position: 'absolute', top: 0, bottom: 0,
+                  left: `${Math.min(r.first_score, 100)}%`, width: 2,
+                  background: C.bg, opacity: .85 }} />
+              )}
             </div>
 
             {/* what's inside it */}
@@ -151,20 +192,68 @@ export default function Pillars({ userId }) {
                   .filter(([, val]) => val != null)
                   .map(([k, val], n) => {
                     const t = targets.find(x => x.label === k)
+                    // Where they are, in their own unit, then where
+                    // they're going. A score on its own is a grade;
+                    // "160kg, aiming at 194" is a training block.
+                    const now = t && shown(t, t.now_value)
+                    const goal = t && shown(t, t.goal_value)
+                    const toGoal = t && gapTo(t, t.goal_value)
+                    // A boundary they're nearly at is worth saying —
+                    // it just isn't worth aiming eight weeks at.
+                    const nearly = t && t.next_band &&
+                      t.next_band !== t.goal_band && gapTo(t, t.next_value)
+                    const moved = t && t.first_value != null &&
+                      Number(t.first_value) !== Number(t.now_value)
+                      ? (t.lower_wins
+                          ? Number(t.first_value) - Number(t.now_value)
+                          : Number(t.now_value) - Number(t.first_value))
+                      : null
+
                     return (
-                      <div key={k} style={{ display: 'flex',
-                        alignItems: 'center', gap: 10, padding: '8px 0',
+                      <div key={k} style={{ padding: '10px 0',
                         borderTop: n ? `1px solid ${C.line}` : 'none' }}>
-                        <div style={{ width: 26, fontSize: 13, fontWeight: 800,
-                          ...T.num, color: band(val)?.c || C.mute }}>{val}</div>
-                        <div style={{ flex: 1, fontSize: 13 }}>{k}</div>
-                        {t?.next_value && t?.next_band && (
-                          <div style={{ fontSize: 12, color: C.mute }}>
-                            {t.unit === 'time'
-                              ? fmt(Number(t.next_value))
-                              : `${Math.round(Number(t.next_value))}${
-                                  t.unit === 'kg' ? 'kg' : ''}`}
-                            {' '}for {t.next_band}
+                        <div style={{ display: 'flex', alignItems: 'baseline',
+                          gap: 10 }}>
+                          <div style={{ width: 26, fontSize: 13,
+                            fontWeight: 800, ...T.num,
+                            color: band(val)?.c || C.mute }}>{val}</div>
+                          <div style={{ flex: 1, fontSize: 13 }}>{k}</div>
+                          {now && (
+                            <div style={{ fontSize: 14, fontWeight: 800,
+                              ...T.num }}>{now}</div>
+                          )}
+                          {goal && (
+                            <>
+                              <div style={{ fontSize: 12, color: C.mute }}>→</div>
+                              <div style={{ fontSize: 14, fontWeight: 800,
+                                ...T.num, color: C.sub }}>{goal}</div>
+                            </>
+                          )}
+                        </div>
+
+                        {(goal || moved || nearly) && (
+                          <div style={{ display: 'flex', gap: 8,
+                            marginLeft: 36, marginTop: 3, flexWrap: 'wrap' }}>
+                            {goal && toGoal && (
+                              <span style={{ fontSize: 11.5, color: C.mute }}>
+                                {toGoal} to {BAND[t.goal_band] || t.goal_band}
+                              </span>
+                            )}
+                            {nearly && (
+                              <span style={{ fontSize: 11.5, color: C.sub }}>
+                                · {nearly} off {BAND[t.next_band]}
+                              </span>
+                            )}
+                            {moved != null && moved !== 0 && (
+                              <span style={{ fontSize: 11.5,
+                                color: moved > 0 ? C.best : C.mute }}>
+                                · {moved > 0 ? '+' : ''}
+                                {t.unit === 'time'
+                                  ? `${fmt(Math.abs(Math.round(moved)))} ${
+                                      moved > 0 ? 'faster' : 'slower'}`
+                                  : `${Math.round(moved)}kg`} since your first
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>

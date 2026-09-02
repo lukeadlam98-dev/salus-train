@@ -323,8 +323,7 @@ export default function Guided({ plan, title, onFinish, onQuit, extra }) {
             color: timed ? C.sub : C.bg }}>
           {timed ? 'Skip ahead'
             : i + 1 >= safe.length ? 'Finish'
-            : reps && rep + 1 < reps ? `Done — ${rep + 2} of ${reps}`
-            : 'Done — next'}
+            : 'Done'}
         </button>
 
         {/* Said once, at the bottom, in the smallest type on the

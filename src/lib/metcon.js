@@ -5,6 +5,21 @@
 // small card at the bottom of a set grid while a run got a full screen
 // telling you what to do this second. Same problem, worse answer.
 
+// What the coach actually wrote about this block.
+//
+// `scheme` looked like the place for it and isn't — it holds the
+// format summary ("Circuit \u00b7 5 rounds"), which the screen already
+// says in the round header. Printing it under the instruction was
+// telling somebody mid-round the thing they could read above it.
+// `coach_notes` is the prose, and `rest_note` is the answer to "do I
+// rest", which is the question the screen kept failing.
+const coachNote = block => {
+  const notes = (block.coach_notes || [])
+    .map(n => [n.heading, n.body].filter(Boolean).join(': '))
+    .filter(Boolean)
+  return notes.length ? notes.join(' \u00b7 ') : null
+}
+
 // The movements in a block, as a readable line.
 //
 // Coaches write the prescription into both columns often enough —
@@ -94,10 +109,10 @@ export function metconSegments(block) {
       for (let r = 0; r < n; r++) {
         lines.forEach(l => out.push({
           kind: 'work', round: r + 1, rounds: n, label: l,
-          note: block.scheme || null }))
+          note: coachNote(block) }))
         if (block.rest_s && r < n - 1) out.push({
           kind: 'rest', seconds: block.rest_s, round: r + 1, rounds: n,
-          label: 'Rest', note: null })
+          label: 'Rest', note: block.rest_note || null })
       }
       return out
     }
@@ -110,7 +125,7 @@ export function metconSegments(block) {
         lines.forEach(l => out.push({
           kind: 'work', round: n + 1, rounds: steps.length,
           label: `${reps} ${l.replace(/^\d+\s*/, '')}`,
-          note: block.scheme || null }))
+          note: coachNote(block) }))
       })
       return out
     }
@@ -147,8 +162,7 @@ export function sessionSegments(blocks) {
     if (segs) {
       // A label for the block, so five rounds of a circuit don't run
       // straight out of the warm-up with no marker between them.
-      out.push(...segs.map(x => ({ ...x, blockLabel: b.label,
-        note: x.note || b.scheme || null })))
+      out.push(...segs.map(x => ({ ...x, blockLabel: b.label })))
       continue
     }
 
@@ -159,7 +173,7 @@ export function sessionSegments(blocks) {
       .filter(Boolean)
     if (lines.length) out.push({
       kind: 'work', label: lines.join(', '), blockLabel: b.label,
-      note: b.scheme || 'Tap when it\u2019s done.' })
+      note: coachNote(b) })
   }
 
   return out.length ? out : null
