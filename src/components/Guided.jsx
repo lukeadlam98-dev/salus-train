@@ -110,12 +110,23 @@ export default function Guided({ plan, title, onFinish, onQuit, extra }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column',
         justifyContent: 'center', textAlign: 'center' }}>
 
-        {(seg.round || seg.rep || seg.block) && (
-          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.16em',
-            color: C.mute, marginBottom: 14 }}>
-            {seg.block ? `BLOCK ${seg.block} OF ${seg.blocks}`
-              : seg.round ? `ROUND ${seg.round} OF ${seg.rounds}`
-              : `${seg.rep} OF ${seg.reps}`}
+        {/* Which part of the session, then which round of it. A
+            warm-up circuit and the work circuit both say "round 2 of
+            5" otherwise, and there's no way to tell them apart. */}
+        {(seg.blockLabel || seg.round || seg.rep || seg.block) && (
+          <div style={{ marginBottom: 14 }}>
+            {seg.blockLabel && (
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: C.sub,
+                marginBottom: 5 }}>{seg.blockLabel}</div>
+            )}
+            {(seg.round || seg.rep || seg.block) && (
+              <div style={{ fontSize: 12, fontWeight: 800,
+                letterSpacing: '.16em', color: C.mute }}>
+                {seg.block ? `BLOCK ${seg.block} OF ${seg.blocks}`
+                  : seg.round ? `ROUND ${seg.round} OF ${seg.rounds}`
+                  : `${seg.rep} OF ${seg.reps}`}
+              </div>
+            )}
           </div>
         )}
 

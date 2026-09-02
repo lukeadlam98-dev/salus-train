@@ -45,6 +45,22 @@ export const PAL = {
   gDeep: '#2A2725',
   gLine: 'rgba(255,255,255,.45)',
   red:   '#C4685A',
+
+  // ---- the one place colour is allowed ----
+  //
+  // The system is monochrome everywhere else and should stay that way.
+  // But "where to work" is a screen somebody scans for one thing —
+  // which of these is the problem — and value alone makes them read
+  // four bars and compare. Colour answers it before they've focused.
+  //
+  // Warm and desaturated so it sits on the same ground as the rest
+  // rather than looking like a different app. No pure red, no traffic
+  // green: those belong to errors and success states, and a 52 is
+  // neither an error nor a failure. It's a thing to work on.
+  weak:  '#C77A5E',   // needs the work
+  mid:   '#C4A265',   // fine
+  good:  '#8FA870',   // strong
+  best:  '#6FA894',   // well ahead of what the racing asks
   sheet: '#1B1918',
   gold:  '#FFFFFF', silver: '#C2BDB5', bronze: '#867F77',
   shadow: 'none',

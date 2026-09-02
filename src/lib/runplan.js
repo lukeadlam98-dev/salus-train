@@ -175,11 +175,14 @@ export function segmentsFor(session, fivekSeconds = null) {
       minutes: session.run_minutes || session.est_min || 30 })
 
     default:
-      // A run with no plan on it used to fall through to a form, which
-      // meant tapping Start and being asked to type in a 5km. If we
-      // know roughly how long it should take, guide it as an easy run
-      // rather than dropping somebody into data entry.
-      if (session?.est_min) return easySegments({ minutes: session.est_min })
+      // Nothing. Not an easy run.
+      //
+      // This used to fall back to "guide it as a zone 2 run for
+      // est_min minutes", which meant a Wednesday that says Warm Up
+      // then five rounds of a circuit asked somebody for a seventy
+      // minute jog. Inventing a session is worse than admitting we
+      // don't know: the session already describes itself in its
+      // blocks, and the caller reads those instead.
       return null
   }
 }

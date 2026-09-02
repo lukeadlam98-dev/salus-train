@@ -52,6 +52,18 @@ export default function App() {
   // wait — and the second one is the flash.
   const [painted, setPainted] = useState(false)
 
+  // The mark is already on screen, drawn by index.html before any
+  // JavaScript ran. This takes it down rather than drawing a second
+  // one over the top — which is what made it flash.
+  useEffect(() => {
+    if (!painted) return
+    const boot = document.getElementById('boot')
+    if (!boot) return
+    boot.classList.add('ready')
+    const t = setTimeout(() => boot.remove(), 500)
+    return () => clearTimeout(t)
+  }, [painted])
+
   // The splash lifts on its own after two seconds no matter what.
   // A loading screen that depends on one callback firing is a loading
   // screen that will eventually get stuck, and a stuck one looks like
@@ -209,7 +221,10 @@ export default function App() {
   // the mark while auth and the profile resolve gives the eye
   // something to hold, and means the app appears to arrive rather than
   // to blink.
-  if (!ready) return <Splash />
+  // index.html is still showing the mark at this point, so rendering
+  // nothing is correct — anything here would be a second thing fading
+  // over the first.
+  if (!ready) return null
   if (!session) return <Shell><Auth cfg={cfg} linkErr={linkErr}
     clearLinkErr={() => setLinkErr(null)} /></Shell>
 
@@ -217,7 +232,7 @@ export default function App() {
   if (recovery) return (
     <Shell><SetPassword cfg={cfg} onDone={() => setRecovery(false)} /></Shell>
   )
-  if (!profile) return <Splash />
+  if (!profile) return null
 
   /* ---------- back office ---------- */
   // Deliberately outside Shell: the member layout is phone-width, and
@@ -348,9 +363,6 @@ export default function App() {
           refetches and shows a skeleton — which is the flash between
           tabs. Hiding rather than unmounting makes the second visit
           instant, and the cost is a few components sitting in memory. */}
-      {/* Held over everything until Train has painted. Fades rather
-          than cutting, so the app arrives instead of appearing. */}
-      {!painted && <Splash fading />}
 
       <Keep on={tab === 'today'}>
         <Guard><Today profile={profile} week={week} onReady={() => setPainted(true)}
@@ -413,38 +425,6 @@ function Keep({ on, children }) {
   useEffect(() => { if (on) setSeen(true) }, [on])
   if (!seen) return null
   return <div style={{ display: on ? 'block' : 'none' }}>{children}</div>
-}
-
-// The first second.
-//
-// Deliberately not a spinner. A spinner says "something is wrong and
-// we are trying"; a mark that breathes says "this is loading", which
-// is the truth and reads calmer.
-function Splash({ fading }) {
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: '#090908', zIndex: 200,
-      display: 'grid', placeItems: 'center',
-      animation: fading ? 'splashOut .45s ease .1s both' : 'none',
-      pointerEvents: fading ? 'none' : 'auto',
-    }}>
-      <div style={{ animation: 'breathe 2.2s ease-in-out infinite' }}>
-        <svg width="54" height="54" viewBox="0 0 40 40">
-          {Array.from({ length: 20 }).map((_, i) => {
-            const a = (i / 20) * Math.PI * 2 - Math.PI / 2
-            const inner = i % 2 === 0 ? 7 : 9.5
-            const outer = i % 2 === 0 ? 18 : 15
-            return (
-              <line key={i}
-                x1={20 + Math.cos(a) * inner} y1={20 + Math.sin(a) * inner}
-                x2={20 + Math.cos(a) * outer} y2={20 + Math.sin(a) * outer}
-                stroke="#F6F3EE" strokeWidth="2.2" strokeLinecap="round" />
-            )
-          })}
-        </svg>
-      </div>
-    </div>
-  )
 }
 
 // A crash in one screen shouldn't take the app with it.

@@ -47,6 +47,16 @@ const ADVICE = {
   },
 }
 
+// The band a score sits in, and its colour. Four steps rather than
+// three, because "fine" and "strong" are different instructions and
+// collapsing them loses the difference between hold it and build it.
+const band = v =>
+  v == null ? null
+    : v < 45 ? { key: 'low',  label: 'Needs the work', c: C.weak }
+    : v < 62 ? { key: 'mid',  label: 'Getting there',  c: C.mid  }
+    : v < 80 ? { key: 'mid',  label: 'Strong',         c: C.good }
+    :          { key: 'high', label: 'Well ahead',     c: C.best }
+
 export default function Pillars({ userId }) {
   const [rows, setRows] = useState([])
   const [targets, setTargets] = useState([])
@@ -93,24 +103,30 @@ export default function Pillars({ userId }) {
       {/* ---- the three ---- */}
       {rows.map(r => {
         const v = r.score == null ? null : Number(r.score)
-        const band = v == null ? null : v < 45 ? 'low' : v < 72 ? 'mid' : 'high'
+        const b = band(v)
         const isWeak = weakest && r.pillar === weakest.pillar
 
         return (
           <Card key={r.pillar} style={{ marginBottom: 10,
-            border: `1px solid ${isWeak ? C.gLine : 'transparent'}` }}>
+            border: `1px solid ${isWeak ? C.weak + '55' : 'transparent'}` }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <div style={{ fontSize: 15.5, fontWeight: 700, flex: 1 }}>
-                {r.pillar}
-                {isWeak && (
-                  <span style={{ fontSize: 9.5, fontWeight: 800,
-                    letterSpacing: '.1em', color: C.g,
-                    marginLeft: 9 }}>WEAKEST</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15.5, fontWeight: 700 }}>
+                  {r.pillar}
+                  {isWeak && (
+                    <span style={{ fontSize: 9.5, fontWeight: 800,
+                      letterSpacing: '.1em', color: C.weak,
+                      marginLeft: 9 }}>START HERE</span>
+                  )}
+                </div>
+                {b && (
+                  <div style={{ fontSize: 12, fontWeight: 600, color: b.c,
+                    marginTop: 3 }}>{b.label}</div>
                 )}
               </div>
               <div style={{ fontSize: 26, fontWeight: 900,
                 letterSpacing: '-.045em', ...T.num,
-                color: v == null ? C.mute : C.ink }}>
+                color: b ? b.c : C.mute }}>
                 {v ?? '—'}
               </div>
             </div>
@@ -120,8 +136,9 @@ export default function Pillars({ userId }) {
               background: C.card3, marginTop: 11, overflow: 'hidden' }}>
               {v != null && (
                 <div style={{ position: 'absolute', inset: 0,
-                  width: `${Math.min(v, 100)}%`, background: C.g,
-                  borderRadius: 999, transition: 'width .5s' }} />
+                  width: `${Math.min(v, 100)}%`, background: b.c,
+                  borderRadius: 999,
+                  animation: `fill .9s cubic-bezier(.16,.9,.3,1) both` }} />
               )}
             </div>
 
@@ -138,8 +155,8 @@ export default function Pillars({ userId }) {
                       <div key={k} style={{ display: 'flex',
                         alignItems: 'center', gap: 10, padding: '8px 0',
                         borderTop: n ? `1px solid ${C.line}` : 'none' }}>
-                        <div style={{ width: 24, fontSize: 13, fontWeight: 800,
-                          ...T.num, color: val < 45 ? C.sub : C.ink }}>{val}</div>
+                        <div style={{ width: 26, fontSize: 13, fontWeight: 800,
+                          ...T.num, color: band(val)?.c || C.mute }}>{val}</div>
                         <div style={{ flex: 1, fontSize: 13 }}>{k}</div>
                         {t?.next_value && t?.next_band && (
                           <div style={{ fontSize: 12, color: C.mute }}>
@@ -156,11 +173,11 @@ export default function Pillars({ userId }) {
               </div>
             )}
 
-            {band && (
+            {b && (
               <div style={{ ...T.small, fontSize: 12.5, marginTop: 12,
                 paddingTop: 11, borderTop: `1px solid ${C.line}`,
                 lineHeight: 1.55 }}>
-                {ADVICE[r.pillar]?.[band]}
+                {ADVICE[r.pillar]?.[b.key]}
               </div>
             )}
 

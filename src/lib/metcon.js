@@ -114,3 +114,41 @@ export function metconSegments(block) {
 export const isGuidable = block =>
   ['fortime', 'amrap', 'emom', 'intervals', 'circuit', 'ladder']
     .includes(block?.format)
+
+
+// A whole session, from its blocks.
+//
+// Wednesday is a run in the database but it is written as blocks: a
+// warm-up circuit, then five rounds of run-station-station. Guiding it
+// off run_kind alone meant either inventing a jog or dropping into a
+// form, when the session was sitting there describing itself the whole
+// time.
+//
+// So: if a session has blocks we can guide, string them together. The
+// warm-up becomes segments, the work becomes segments, and it runs end
+// to end like anything else.
+export function sessionSegments(blocks) {
+  if (!Array.isArray(blocks) || blocks.length === 0) return null
+
+  const out = []
+  for (const b of blocks) {
+    const segs = metconSegments(b)
+    if (segs) {
+      // A label for the block, so five rounds of a circuit don't run
+      // straight out of the warm-up with no marker between them.
+      out.push(...segs.map(x => ({ ...x, blockLabel: b.label })))
+      continue
+    }
+
+    // Straight sets inside an otherwise-guidable session: one segment
+    // that waits for a tap. Better than skipping it silently.
+    const lines = (b.block_lines || [])
+      .map(l => [l.prescription, l.movement].filter(Boolean).join(' '))
+      .filter(Boolean)
+    if (lines.length) out.push({
+      kind: 'work', label: lines.join(', '), blockLabel: b.label,
+      note: b.scheme || 'Tap when it\u2019s done.' })
+  }
+
+  return out.length ? out : null
+}

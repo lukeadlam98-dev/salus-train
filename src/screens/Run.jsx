@@ -3,6 +3,8 @@ import { C, T, F } from '../lib/theme'
 import { fmt } from '../lib/format'
 import { saveRun, getAerobicZone } from '../lib/data'
 import { segmentsFor } from '../lib/runplan'
+import { sessionSegments } from '../lib/metcon'
+import { getSessionDetail } from '../lib/data'
 import { getBenchmarks } from '../lib/data'
 import { Card, Label, Btn, Back, Ico, I, page } from '../components/ui'
 import Guided from '../components/Guided'
@@ -38,9 +40,18 @@ export default function Run({ userId, session, onBack, onDone }) {
       .catch(() => {})
   }, [userId])
 
+  // A session written as blocks — a warm-up then five rounds of a
+  // circuit — is guided from those. Only sessions with neither a run
+  // plan nor blocks fall through to typing the numbers in.
+  const [blocks, setBlocks] = useState(null)
+  useEffect(() => {
+    if (!session?.id) return
+    getSessionDetail(session.id).then(setBlocks).catch(() => setBlocks([]))
+  }, [session?.id])
+
   // Rebuilt when the 5km lands, so the reps get a target rather than
   // waiting for a tap. Without one they still work, they just ask.
-  const plan = segmentsFor(session, fivek)
+  const plan = segmentsFor(session, fivek) || sessionSegments(blocks)
 
   // Guided owns the clock, the segments and the advancing. This screen
   // is now three states: read what's coming, do it, or type in a run
@@ -169,17 +180,19 @@ export default function Run({ userId, session, onBack, onDone }) {
                 borderTop: n ? `1px solid ${C.line}` : 'none' }}>
                 <span style={{ width: 9, height: 9, borderRadius: 3,
                   background: COLOUR[s.kind] || C.card3, flexShrink: 0 }} />
-                <div style={{ flex: 1, fontSize: 14.5, fontWeight: 600 }}>
-                  {s.label}
-                  {s.block && (
-                    <span style={{ color: C.mute, fontWeight: 500 }}>
-                      {' '}· block {s.block}
-                    </span>
-                  )}
-                  {s.rep && (
-                    <span style={{ color: C.mute, fontWeight: 500 }}>
-                      {' '}· {s.rep} of {s.reps}
-                    </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 600,
+                    overflow: 'hidden', textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap' }}>{s.label}</div>
+                  {(s.blockLabel || s.block || s.rep || s.round) && (
+                    <div style={{ fontSize: 11.5, color: C.mute,
+                      marginTop: 2 }}>
+                      {[s.blockLabel,
+                        s.block ? `block ${s.block}` : null,
+                        s.round ? `round ${s.round}` : null,
+                        s.rep ? `${s.rep} of ${s.reps}` : null]
+                        .filter(Boolean).join(' · ')}
+                    </div>
                   )}
                 </div>
                 <div style={{ fontSize: 13, color: C.sub, ...T.num }}>
