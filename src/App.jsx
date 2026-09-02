@@ -74,15 +74,20 @@ export default function App() {
     return () => clearInterval(t)
   }, [profile?.id])
 
-  // Opening the room clears it.
-  useEffect(() => {
-    if (tab !== 'community') return
-    markRoomSeen().then(() => setUnread(0)).catch(() => {})
-  }, [tab])
   const [recovery, setRecovery] = useState(false)
   const [linkErr, setLinkErr] = useState(null)
 
   const [tab, setTab] = useState('today')
+
+  // Opening the room clears the badge.
+  //
+  // This sat above the declaration of `tab` and threw "cannot access
+  // before initialization" on every render — which is a black screen,
+  // because it happens before any error boundary is mounted.
+  useEffect(() => {
+    if (tab !== 'community') return
+    markRoomSeen().then(() => setUnread(0)).catch(() => {})
+  }, [tab])
   const [plan, setPlan] = useState(false)
   const [coaches, setCoaches] = useState(false)
   const [progress, setProgress] = useState(false)

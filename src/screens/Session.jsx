@@ -6,7 +6,8 @@ import { Card, Label, Btn, Chip, Back, Ico, I, page } from '../components/ui'
 import Photo from '../components/Photo'
 import { P } from '../lib/theme'
 import Keypad from '../components/Keypad'
-import BlockTimer from '../components/BlockTimer'
+import Guided from '../components/Guided'
+import { metconSegments, isGuidable } from '../lib/metcon'
 import { SkeletonSession } from '../components/Skeleton'
 import { getCoaches } from '../lib/data'
 
@@ -47,6 +48,16 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
   const [log, setLog] = useState(null)          // workout_logs row
   const [sets, setSets] = useState({})          // "itemId.idx" -> {reps,kg,done}
   const [bi, setBi] = useState(0)
+
+  // A metcon gets the full screen, same as a run does. Thirty-three of
+  // them across the block were getting a small card at the bottom of a
+  // set grid, which is the wrong shape for something you do while out
+  // of breath.
+  //
+  // Declared up here with the other hooks — this component has early
+  // returns for the loading and preview states, and a hook after one
+  // of those runs on some renders and not others.
+  const [guided, setGuided] = useState(null)
   const [t, setT] = useState(0)
   const [rest, setRest] = useState(null)
   const [pad, setPad] = useState(null)
@@ -230,9 +241,7 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
 
           {b.scheme && <Chip>{b.scheme}</Chip>}
 
-          {/* A clock, where the format needs one. Straight sets get
-              nothing — a rest timer nobody asked for is just noise. */}
-          <BlockTimer block={b} />
+
 
           <div style={{ marginTop: b.scheme ? 4 : 0 }}>
             {b.block_lines.map(l => {
@@ -284,6 +293,20 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
   const swipe = useSwipe(
     () => setBi(i => Math.min(i + 1, blocks.length - 1)),
     () => setBi(i => Math.max(i - 1, 0)),
+  )
+
+  if (guided) return (
+    <Guided plan={guided} title={B.label}
+      onQuit={() => setGuided(null)}
+      onFinish={r => {
+        setGuided(null)
+        // The score goes on the block so it shows on the summary and
+        // in the WOD board — a metcon nobody recorded is a metcon that
+        // didn't happen as far as the app is concerned.
+        writeSet(B, 0, { seconds: r.seconds,
+          reps: r.rounds || null, done: true }).catch(() => {})
+        if (bi < blocks.length - 1) setBi(bi + 1)
+      }} />
   )
 
   return (
