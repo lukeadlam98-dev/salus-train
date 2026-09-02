@@ -186,3 +186,53 @@ export function segmentsFor(session, fivekSeconds = null) {
       return null
   }
 }
+
+// ---------------- a pace to aim for ----------------
+//
+// The plan already knows how long a piece should take when a 5km is
+// on file — it just spent that knowledge on a countdown. A countdown
+// tells you when you're late; a pace tells you how to run.
+//
+// Both come from the same number, so this hands back the pace as well
+// and the screen can show it before the piece starts rather than
+// after.
+export const perKm = (seconds, metres) =>
+  !seconds || !metres ? null : Math.round(seconds / (metres / 1000))
+
+export const mmss = s => {
+  if (!s && s !== 0) return null
+  const n = Math.round(s)
+  return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`
+}
+
+// A distance written into a label — "1km", "400m", "1km @ race pace".
+// Sessions written as blocks don't carry a metres field, so the
+// distance is sitting in the text and nowhere else.
+export function metresIn(label) {
+  const t = String(label || '')
+  const km = t.match(/(\d+(?:\.\d+)?)\s*km\b/i)
+  if (km) return Math.round(Number(km[1]) * 1000)
+  const m = t.match(/(?:^|\s)(\d{2,5})\s*m\b/i)
+  if (m) return Number(m[1])
+  return null
+}
+
+// What this piece should be run at.
+//
+// Reps get rep pace — a 200 is run harder than a 400, which is the
+// coaching point. Anything race-paced gets race pace, deliberately
+// slower, because a compromised run is a rehearsal and the split you
+// hold on round five is the one that matters.
+export function paceTarget(seg, fivekSeconds) {
+  if (!fivekSeconds || !seg) return null
+  const metres = seg.metres || metresIn(seg.label)
+  if (!metres) return null
+
+  const raced = seg.kind === 'race' ||
+    /race pace/i.test(String(seg.label || '')) ||
+    /race pace/i.test(String(seg.note || ''))
+  const f = raced ? 1.06 : (REP_PACE[metres] || 0.92)
+
+  const seconds = Math.round(metres * (fivekSeconds / 5000) * f)
+  return { metres, seconds, perKm: perKm(seconds, metres) }
+}

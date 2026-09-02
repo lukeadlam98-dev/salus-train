@@ -94,7 +94,7 @@ export function metconSegments(block) {
       for (let r = 0; r < n; r++) {
         lines.forEach(l => out.push({
           kind: 'work', round: r + 1, rounds: n, label: l,
-          note: 'Tap when it\u2019s done.' }))
+          note: block.scheme || null }))
         if (block.rest_s && r < n - 1) out.push({
           kind: 'rest', seconds: block.rest_s, round: r + 1, rounds: n,
           label: 'Rest', note: null })
@@ -110,7 +110,7 @@ export function metconSegments(block) {
         lines.forEach(l => out.push({
           kind: 'work', round: n + 1, rounds: steps.length,
           label: `${reps} ${l.replace(/^\d+\s*/, '')}`,
-          note: 'Tap when it\u2019s done.' }))
+          note: block.scheme || null }))
       })
       return out
     }
@@ -147,7 +147,8 @@ export function sessionSegments(blocks) {
     if (segs) {
       // A label for the block, so five rounds of a circuit don't run
       // straight out of the warm-up with no marker between them.
-      out.push(...segs.map(x => ({ ...x, blockLabel: b.label })))
+      out.push(...segs.map(x => ({ ...x, blockLabel: b.label,
+        note: x.note || b.scheme || null })))
       continue
     }
 

@@ -135,9 +135,7 @@ export default function SessionCard({ session, blocks = [], coach,
         <button onClick={onOpen} style={{ width: '100%', border: 'none',
           borderRadius: 999, padding: '16px 0', fontSize: 15.5, fontWeight: 700,
           cursor: 'pointer', fontFamily: F, background: C.ink, color: C.bg }}>
-          {s.kind === 'half' ? 'Start the half'
-            : s.kind === 'run' ? 'Start the run'
-            : 'Start the session'}
+          {s.kind === 'half' ? 'Start the half' : 'Start the workout'}
         </button>
         {s.est_min && (
           <div style={{ textAlign: 'center', fontSize: 12, color: C.mute,

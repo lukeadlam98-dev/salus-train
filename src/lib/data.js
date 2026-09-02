@@ -412,10 +412,30 @@ export async function saveRun(userId, run, splits = []) {
   const { data, error } = await supabase.from('run_logs')
     .insert({ user_id: userId, ...run }).select().single()
   if (error) throw error
+
+  // The splits are named for the table, not for whatever the screen
+  // happened to call them.
+  //
+  // The guided screen builds a lap as { seconds, label, metres,
+  // rounds } and this spread it straight into run_splits, which has
+  // distance_m and no rounds at all. PostgREST rejects the whole
+  // insert with a 400 — and because that threw, the finish handler
+  // never ran, so every guided session ended on the running screen
+  // with no completion page and no saved run. One key name.
   if (splits.length) {
-    const rows = splits.map((s, i) => ({ run_log_id: data.id, idx: i + 1, ...s }))
+    const rows = splits.map((s, i) => ({
+      run_log_id: data.id,
+      idx: i + 1,
+      distance_m: s.distance_m ?? s.metres ?? null,
+      seconds: s.seconds ?? null,
+      is_station: s.is_station ?? ['station', 'work'].includes(s.kind),
+      label: s.label ?? null,
+    }))
+    // Splits are the detail. The run itself is already saved, and
+    // losing the detail is not worth losing the session over — which
+    // is exactly what throwing here did.
     const { error: e2 } = await supabase.from('run_splits').insert(rows)
-    if (e2) throw e2
+    if (e2) console.warn('run_splits:', e2.message)
   }
   return data
 }

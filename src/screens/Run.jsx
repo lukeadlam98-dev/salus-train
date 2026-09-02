@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { C, T, F } from '../lib/theme'
 import { fmt } from '../lib/format'
 import { saveRun, getAerobicZone } from '../lib/data'
-import { segmentsFor } from '../lib/runplan'
+import { segmentsFor, paceTarget, mmss } from '../lib/runplan'
 import { sessionSegments } from '../lib/metcon'
 import { whiteboard, boardSummary } from '../lib/whiteboard'
 import { getSessionDetail } from '../lib/data'
@@ -46,7 +46,16 @@ export default function Run({ userId, session, onBack, onDone }) {
 
   // Rebuilt when the 5km lands, so the reps get a target rather than
   // waiting for a tap. Without one they still work, they just ask.
-  const plan = segmentsFor(session, fivek) || sessionSegments(blocks)
+  const raw = segmentsFor(session, fivek) || sessionSegments(blocks)
+
+  // A pace on every piece we can work one out for. The 5km is already
+  // on file and the plan was spending it on a countdown; the same
+  // number said as a pace is the thing you can actually run to.
+  const plan = raw && raw.map(seg => {
+    const t = paceTarget(seg, fivek)
+    return t ? { ...seg, target: `${mmss(t.perKm)} /km`,
+                 targetTime: mmss(t.seconds) } : seg
+  })
 
   // The same plan, folded back into rounds for the read-before-you-start.
   const board = plan ? whiteboard(plan) : null
@@ -61,9 +70,10 @@ export default function Run({ userId, session, onBack, onDone }) {
   const [entry, setEntry] = useState({
     distance_m: session?.run_distance_m || 5000, seconds: null })
   const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(null)
 
   async function finish(result) {
-    setLive(false); setBusy(true)
+    setLive(false); setBusy(true); setFailed(null)
     const all = result?.laps || []
     const metres = all.reduce((a, l) => a + (l.metres || 0), 0)
     const secs = result?.seconds || all.reduce((a, l) => a + (l.seconds || 0), 0)
@@ -75,7 +85,13 @@ export default function Run({ userId, session, onBack, onDone }) {
         distance_m: metres || null, seconds: secs,
       }, all)
       onDone?.()
-    } catch (_) { setBusy(false) }
+    } catch (e) {
+      // It used to land back on this screen with no explanation, which
+      // reads as the app having eaten the session. Say what happened
+      // and keep the numbers, so the tap on retry costs nothing.
+      setBusy(false)
+      setFailed({ result, message: e?.message || 'It didn\u2019t save.' })
+    }
   }
 
   async function saveManual() {
@@ -151,6 +167,19 @@ export default function Run({ userId, session, onBack, onDone }) {
         )}
       </div>
 
+      {failed && (
+        <Card style={{ marginTop: 18, background: C.card2 }}>
+          <Label>NOT SAVED</Label>
+          <p style={{ ...T.body, marginTop: 8 }}>
+            You finished it — the log didn’t go through. {failed.message}
+          </p>
+          <Btn tone="soft" style={{ marginTop: 14 }} disabled={busy}
+            onClick={() => finish(failed.result)}>
+            {busy ? 'Saving…' : 'Try again'}
+          </Btn>
+        </Card>
+      )}
+
       {zone && ['easy', 'long'].includes(session?.run_kind) && (
         <Card style={{ marginTop: 18, background: C.card2 }}>
           <Label>KEEP IT HERE</Label>
@@ -170,7 +199,7 @@ export default function Run({ userId, session, onBack, onDone }) {
       {board && (
         <>
           <Label style={{ margin: '26px 0 11px' }}>
-            {summary.minutes} MIN
+            {session?.est_min || summary.minutes} MIN
           </Label>
 
           {board.map((b, n) => (
@@ -197,12 +226,13 @@ export default function Run({ userId, session, onBack, onDone }) {
                 <div key={i} style={{ display: 'flex', alignItems: 'baseline',
                   gap: 14, padding: '9px 0',
                   borderTop: `1px solid ${C.line}` }}>
-                  <div style={{ width: 82, flexShrink: 0, textAlign: 'right',
-                    fontSize: 19, fontWeight: 800, letterSpacing: '-.03em',
-                    ...T.num, color: l.rest ? C.mute : C.ink }}>
+                  <div style={{ minWidth: 62, flexShrink: 0, textAlign: 'right',
+                    fontSize: 16, fontWeight: 800, letterSpacing: '-.03em',
+                    whiteSpace: 'nowrap', ...T.num,
+                    color: l.rest ? C.mute : C.ink }}>
                     {l.qty || ''}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0, fontSize: 17,
+                  <div style={{ flex: 1, minWidth: 0, fontSize: 15,
                     fontWeight: 600, letterSpacing: '-.01em',
                     color: l.rest ? C.mute : C.ink }}>
                     {l.move}
@@ -216,7 +246,7 @@ export default function Run({ userId, session, onBack, onDone }) {
 
       <Btn style={{ marginTop: 22 }}
         onClick={() => plan ? setLive(true) : setManual(true)}>
-        {plan ? 'Start' : 'Put the numbers in'}
+        {plan ? 'Start the workout' : 'Put the numbers in'}
       </Btn>
       {plan && (
         <button onClick={() => setManual(true)} style={{ width: '100%',
@@ -242,6 +272,15 @@ export default function Run({ userId, session, onBack, onDone }) {
       extra={seg => seg.kind === 'zone' && zone ? (
         <div style={{ fontSize: 15, fontWeight: 700, color: C.g,
           marginTop: 8, ...T.num }}>{zone.low}–{zone.high} bpm</div>
+      ) : seg.target ? (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: C.g,
+            ...T.num }}>{seg.target}</div>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.14em',
+            color: C.mute, marginTop: 3 }}>
+            {seg.targetTime} TARGET
+          </div>
+        </div>
       ) : null} />
   )
 }
