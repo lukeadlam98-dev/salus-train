@@ -32,7 +32,7 @@ const BM = [
 // where a toggle and a benchmark look the same.
 export default function You({ userId, profile, benchmarks, setBenchmarks,
                               half, onUpdate, onCoaches, onRaces, onProgress,
-                              onHalf, onBlocks }) {
+                              onHalf, onBlocks, onNotifs }) {
   const [pad, setPad] = useState(null)
   const [score, setScore] = useState(null)
   const [zone, setZone] = useState(null)
@@ -350,6 +350,9 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
             options={[['metric', 'Metric'], ['imperial', 'Imperial']]}
             onChange={v => onUpdate({ units: v })} />
         </div>
+
+        <Row icon={I.msg} label="Notifications"
+          sub="What the app can interrupt you for" onClick={onNotifs} top />
 
         <Toggle top label="Keep the screen on"
           sub="Stops your phone sleeping between sets. You'll still be able to lock it yourself."

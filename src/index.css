@@ -152,3 +152,10 @@ html, body, #root { overflow-x: hidden; max-width: 100vw; }
 @keyframes fill {
   from { width: 0 }
 }
+
+/* The splash leaves rather than cutting. Slightly slower than the
+   fade in, because arriving should feel unhurried. */
+@keyframes splashOut {
+  from { opacity: 1 }
+  to   { opacity: 0; visibility: hidden }
+}

@@ -692,3 +692,26 @@ export async function getBadges(userId) {
   const { data } = await supabase.from('my_badges').select('*').order('ord')
   return data || []
 }
+
+/* ---------------- notifications ---------------- */
+export async function getNotifyPrefs(userId) {
+  const { data } = await supabase.from('notify_prefs')
+    .select('*').eq('user_id', userId).maybeSingle()
+  return data || null
+}
+
+export async function setNotifyPref(userId, key, on) {
+  const { error } = await supabase.from('notify_prefs')
+    .upsert({ user_id: userId, [key]: on, updated_at: new Date() })
+  if (error) throw error
+}
+
+// The badge on the tab. Works whether or not somebody has installed
+// the app or granted push permission — a different job from the phone
+// buzzing, and the one that always works.
+export async function getUnread() {
+  const { data } = await supabase.from('my_unread').select('*').maybeSingle()
+  return data || { room: 0, coach: 0 }
+}
+
+export const markRoomSeen = () => supabase.rpc('mark_room_seen')

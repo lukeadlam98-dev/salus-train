@@ -30,7 +30,7 @@ const ITEMS = [
   ['me',          'Me',          I.user],
 ]
 
-export default function Tabs({ tab, setTab, items }) {
+export default function Tabs({ tab, setTab, items, unread }) {
   // Labels come from the database when they're there; ITEMS is the
   // fallback so the app still works before the migration has run.
   const rows = items?.length
@@ -51,6 +51,7 @@ export default function Tabs({ tab, setTab, items }) {
         const on = tab === k
         return (
           <button key={k} onClick={() => setTab(k)} style={{
+            position: 'relative',
             border: 'none', borderRadius: 999, padding: '8px 0 7px',
             cursor: 'pointer', background: on ? C.card3 : 'transparent',
             display: 'grid', justifyItems: 'center', gap: 3, fontFamily: F,

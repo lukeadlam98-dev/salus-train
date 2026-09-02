@@ -111,21 +111,38 @@ function target(metres, fivek) {
 }
 
 export function compromisedSegments({ rounds = 5, distance_m = 1000,
-                                      station = 'the station',
+                                      station1 = null, station2 = null,
+                                      restSeconds = 90,
                                       fivekSeconds = null }) {
   const out = [{ kind: 'warmup', seconds: 480, label: 'Warm up',
-    note: 'Eight minutes easy, then a couple of strides.' }]
+    note: 'Eight minutes easy, then a couple of strides. You want to be warm before round one, not by round two.' }]
+
   for (let r = 0; r < rounds; r++) {
+    // Race pace, not rep pace — this is a rehearsal, and the whole
+    // point is holding the same split when the legs have gone.
     out.push({ kind: 'rep', metres: distance_m, rep: r + 1, reps: rounds,
       label: `${distance_m}m`,
-      // Race pace, not rep pace — this is the race rehearsal.
       seconds: fivekSeconds
         ? Math.round(distance_m * (fivekSeconds / 5000) * 1.06) : null,
-      note: 'Race pace. Straight into the station after.' })
-    out.push({ kind: 'station', rep: r + 1, reps: rounds,
-      label: station, note: 'Straight into it. Tap when it\u2019s done.' })
+      note: r === 0
+        ? 'Race pace. Whatever you run this one in, you run them all in.'
+        : 'Same split as round one. That is the session.' })
+
+    // Stations are tapped, not timed. Forty wall balls takes as long
+    // as it takes, and putting a clock on it turns a quality session
+    // into a race against the phone.
+    if (station1) out.push({ kind: 'station', rep: r + 1, reps: rounds,
+      label: station1, note: 'Straight into it, no standing about.' })
+    if (station2) out.push({ kind: 'station', rep: r + 1, reps: rounds,
+      label: station2, note: 'Then the rest. Tap when it\u2019s done.' })
+
+    if (r < rounds - 1) out.push({ kind: 'rest', seconds: restSeconds,
+      rep: r + 1, reps: rounds, label: 'Rest',
+      note: 'Breathe. The next kilometre is the same as the last one.' })
   }
-  out.push({ kind: 'cool', seconds: 300, label: 'Cool down', note: 'Five easy.' })
+
+  out.push({ kind: 'cool', seconds: 300, label: 'Cool down',
+    note: 'Five easy. Don\u2019t skip it — this one takes a while to come down from.' })
   return out
 }
 
@@ -143,13 +160,26 @@ export function segmentsFor(session, fivekSeconds = null) {
   switch (session?.run_kind) {
     case 'intervals': return intervalSegments({
       minutes: session.run_minutes, blocks: session.run_blocks })
-    case 'speed':     return speedSegments(session.run_ladder, 60, fivekSeconds)
+
+    case 'speed': return speedSegments(session.run_ladder, 60, fivekSeconds)
+
+    case 'compromised': return compromisedSegments({
+      rounds: session.run_reps || 5,
+      distance_m: session.run_distance_m || 1000,
+      station1: session.station_1, station2: session.station_2,
+      restSeconds: session.rest_s || 90,
+      fivekSeconds })
+
     case 'easy':
-    case 'long':      return easySegments({ minutes: session.run_minutes })
+    case 'long': return easySegments({
+      minutes: session.run_minutes || session.est_min || 30 })
+
     default:
-      if (session?.run_reps > 1) return compromisedSegments({
-        rounds: session.run_reps, distance_m: session.run_distance_m,
-        fivekSeconds })
+      // A run with no plan on it used to fall through to a form, which
+      // meant tapping Start and being asked to type in a 5km. If we
+      // know roughly how long it should take, guide it as an easy run
+      // rather than dropping somebody into data entry.
+      if (session?.est_min) return easySegments({ minutes: session.est_min })
       return null
   }
 }

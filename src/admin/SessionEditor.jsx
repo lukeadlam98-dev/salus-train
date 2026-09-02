@@ -94,6 +94,81 @@ export default function SessionEditor({ session, week, onBack }) {
                     onSave={v => patch({ est_min: v === '' ? null : Number(v) })} />
                 </Field>
               </div>
+
+              {/* What the app walks them through.
+                  A run session without this is a session where the
+                  member taps Start and gets a form asking for a 5km,
+                  which is the wrong end of the workout entirely. */}
+              {s.kind === 'run' && (
+                <div style={{ marginTop: 12 }}>
+                  <Field label="How the app runs it">
+                    <Pick value={s.run_kind || ''}
+                      options={[['', 'Just a timer'], ['easy', 'Easy'],
+                                ['long', 'Long'], ['intervals', 'Intervals'],
+                                ['speed', 'Speed'],
+                                ['compromised', 'Compromised']]}
+                      onChange={v => patch({ run_kind: v || null })} />
+                  </Field>
+
+                  {s.run_kind === 'compromised' && (
+                    <div style={{ display: 'grid',
+                      gridTemplateColumns: '80px 110px 1fr 1fr', gap: 10,
+                      marginTop: 12 }}>
+                      <Field label="Rounds">
+                        <Save value={s.run_reps ?? ''} placeholder="5"
+                          onSave={v => patch({ run_reps: v ? Number(v) : null })} />
+                      </Field>
+                      <Field label="Run, metres">
+                        <Save value={s.run_distance_m ?? ''} placeholder="1000"
+                          onSave={v => patch({ run_distance_m: v ? Number(v) : null })} />
+                      </Field>
+                      <Field label="Then">
+                        <Save value={s.station_1 || ''} placeholder="40 wall balls"
+                          onSave={v => patch({ station_1: v || null })} />
+                      </Field>
+                      <Field label="And then">
+                        <Save value={s.station_2 || ''} placeholder="25 cal row"
+                          onSave={v => patch({ station_2: v || null })} />
+                      </Field>
+                    </div>
+                  )}
+
+                  {s.run_kind === 'intervals' && (
+                    <div style={{ display: 'grid',
+                      gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+                      <Field label="Minutes of work">
+                        <Save value={s.run_minutes ?? ''} placeholder="24"
+                          onSave={v => patch({ run_minutes: v ? Number(v) : null })} />
+                      </Field>
+                      <Field label="Blocks">
+                        <Save value={s.run_blocks ?? ''} placeholder="4"
+                          onSave={v => patch({ run_blocks: v ? Number(v) : null })} />
+                      </Field>
+                    </div>
+                  )}
+
+                  {s.run_kind === 'speed' && (
+                    <div style={{ marginTop: 12 }}>
+                      <Field label="The ladder"
+                        hint="Reps separated by commas. Each becomes a timed piece, with the target worked out from their 5km.">
+                        <Save value={s.run_ladder || ''}
+                          placeholder="5 × 400m, 3 × 300m, 2 × 200m"
+                          onSave={v => patch({ run_ladder: v || null })} />
+                      </Field>
+                    </div>
+                  )}
+
+                  {['easy', 'long'].includes(s.run_kind) && (
+                    <div style={{ marginTop: 12, maxWidth: 220 }}>
+                      <Field label="Minutes in zone 2">
+                        <Save value={s.run_minutes ?? ''} placeholder="30"
+                          onSave={v => patch({ run_minutes: v ? Number(v) : null })} />
+                      </Field>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <Field label="Focus"
                 hint="The one movement today is really about. Shows as a chip on their card, next to the title.">
                 <Suggest value={s.focus} options={FOCUSES}

@@ -100,8 +100,11 @@ export default function Insights({ days, raceDate, programme, half, prediction,
                     width: past ? '100%'
                                 : `${(done / real.length) * 100}%`,
                     background: C.g, borderRadius: 999,
-                    animation: `fill .55s cubic-bezier(.2,.8,.3,1) ${
-                      120 + i * 55}ms both`,
+                    // Slower, and further apart. A bar that snaps full
+                    // reads as a state change; one that takes its time
+                    // reads as progress, which is the point.
+                    animation: `fill 1.1s cubic-bezier(.16,.9,.3,1) ${
+                      340 + i * 110}ms both`,
                     transition: 'width .4s' }} />
                 )}
               </div>

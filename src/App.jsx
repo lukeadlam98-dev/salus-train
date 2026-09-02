@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import { PAL, vars, C, F, T } from './lib/theme'
 import {
   getProfile, updateProfile, getBenchmarks, getWeek, setMyWeek,
   getHalf, getMultiplier, getMyProgramme, getConfig, getPrediction, getTabs,
+  getUnread, markRoomSeen,
 } from './lib/data'
 import { summarise, DEFAULT_MULTIPLIER } from './lib/half'
 
@@ -14,6 +15,7 @@ import Today    from './screens/Today'
 import Plan     from './screens/Plan'
 import Block    from './screens/Block'
 import Programmes from './screens/Programmes'
+import Notifications from './screens/Notifications'
 import Community from './screens/Community'
 import Board    from './screens/Board'
 import Coaches  from './screens/Coaches'
@@ -26,6 +28,7 @@ import Half     from './screens/Half'
 import Effort   from './screens/Effort'
 import Complete from './screens/Complete'
 import Tabs     from './components/Tabs'
+import { page } from './components/ui'
 import Setup    from './components/Setup'
 import { SkeletonToday } from './components/Skeleton'
 import Admin    from './admin/Admin'
@@ -43,6 +46,39 @@ export default function App() {
   const [cfg, setCfg] = useState({})
   const [prediction, setPrediction] = useState(null)
   const [tabItems, setTabItems] = useState(null)
+
+  // The splash stays until the first screen has its data, then fades.
+  // Splash, then a skeleton, then content is two transitions for one
+  // wait — and the second one is the flash.
+  const [painted, setPainted] = useState(false)
+
+  // The splash lifts on its own after two seconds no matter what.
+  // A loading screen that depends on one callback firing is a loading
+  // screen that will eventually get stuck, and a stuck one looks like
+  // a broken app rather than a slow one.
+  useEffect(() => {
+    const t = setTimeout(() => setPainted(true), 2000)
+    return () => clearTimeout(t)
+  }, [])
+  const [unread, setUnread] = useState(0)
+
+  // Polled rather than pushed. Realtime for a badge would mean holding
+  // a socket open on every screen for a number that can be a minute
+  // stale without anyone minding.
+  useEffect(() => {
+    if (!profile) return
+    const read = () => getUnread().then(u => setUnread(Number(u.room) || 0))
+      .catch(() => {})
+    read()
+    const t = setInterval(read, 45000)
+    return () => clearInterval(t)
+  }, [profile?.id])
+
+  // Opening the room clears it.
+  useEffect(() => {
+    if (tab !== 'community') return
+    markRoomSeen().then(() => setUnread(0)).catch(() => {})
+  }, [tab])
   const [recovery, setRecovery] = useState(false)
   const [linkErr, setLinkErr] = useState(null)
 
@@ -52,6 +88,7 @@ export default function App() {
   const [progress, setProgress] = useState(false)
   const [races, setRaces] = useState(false)
   const [blocks, setBlocks] = useState(false)
+  const [notifs, setNotifs] = useState(false)
   const [screen, setScreen] = useState(null)   // null | session | half | effort | done
   const [active, setActive] = useState(null)   // the session being worked
   const [result, setResult] = useState(null)
@@ -242,6 +279,14 @@ export default function App() {
     </Shell>
   )
 
+  /* ---------- notifications ---------- */
+  if (notifs) return (
+    <Shell>
+      <Notifications userId={session.user.id}
+        onBack={() => setNotifs(false)} />
+    </Shell>
+  )
+
   /* ---------- other blocks ---------- */
   if (blocks) return (
     <Shell>
@@ -298,8 +343,12 @@ export default function App() {
           refetches and shows a skeleton — which is the flash between
           tabs. Hiding rather than unmounting makes the second visit
           instant, and the cost is a few components sitting in memory. */}
+      {/* Held over everything until Train has painted. Fades rather
+          than cutting, so the app arrives instead of appearing. */}
+      {!painted && <Splash fading />}
+
       <Keep on={tab === 'today'}>
-        <Today profile={profile} week={week}
+        <Guard><Today profile={profile} week={week} onReady={() => setPainted(true)}
           programme={programme} half={half} onOpen={open}
           onSetRace={() => setRaces(true)}
           onTakeClubRace={() => programme?.race_date &&
@@ -307,21 +356,21 @@ export default function App() {
           onProgress={() => setProgress(true)}
           onCoaches={() => setCoaches(true)}
           onPlan={() => setPlan(true)}
-          prediction={prediction} />
+          prediction={prediction} /></Guard>
       </Keep>
 
       <Keep on={tab === 'community'}>
-        <Community profile={profile} userId={session.user.id}
-          onCoach={() => setCoaches(true)} />
+        <Guard><Community profile={profile} userId={session.user.id}
+          onCoach={() => setCoaches(true)} /></Guard>
       </Keep>
 
       <Keep on={tab === 'leaderboard'}>
-        <Board profile={profile} userId={session.user.id}
-          onShare={() => patch({ share_on_leaderboard: true })} />
+        <Guard><Board profile={profile} userId={session.user.id}
+          onShare={() => patch({ share_on_leaderboard: true })} /></Guard>
       </Keep>
 
       <Keep on={tab === 'me'}>
-        <You userId={session.user.id}
+        <Guard><You userId={session.user.id}
           profile={{ ...profile, email: session.user.email,
                      programme_name: programme?.name }}
           benchmarks={benchmarks} setBenchmarks={setBenchmarks}
@@ -330,7 +379,8 @@ export default function App() {
           onRaces={() => setRaces(true)}
           onProgress={() => setProgress(true)}
           onHalf={() => setScreen('half')}
-          onBlocks={() => setBlocks(true)} />
+          onBlocks={() => setBlocks(true)}
+          onNotifs={() => setNotifs(true)} /></Guard>
       </Keep>
       {/* The nudge sits above the tabs and disappears once the five
           tests are in. Not dismissible on purpose: a member who skips
@@ -342,7 +392,7 @@ export default function App() {
           onGoToTests={() => setTab('me')}
           onGoToHalf={() => setScreen('half')} />
       )}
-      <Tabs tab={tab} setTab={setTab} items={tabItems} />
+      <Tabs tab={tab} setTab={setTab} items={tabItems} unread={unread} />
     </Shell>
   )
 }
@@ -365,11 +415,13 @@ function Keep({ on, children }) {
 // Deliberately not a spinner. A spinner says "something is wrong and
 // we are trying"; a mark that breathes says "this is loading", which
 // is the truth and reads calmer.
-function Splash() {
+function Splash({ fading }) {
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: '#090908',
+      position: 'fixed', inset: 0, background: '#090908', zIndex: 200,
       display: 'grid', placeItems: 'center',
+      animation: fading ? 'splashOut .45s ease .1s both' : 'none',
+      pointerEvents: fading ? 'none' : 'auto',
     }}>
       <div style={{ animation: 'breathe 2.2s ease-in-out infinite' }}>
         <svg width="54" height="54" viewBox="0 0 40 40">
@@ -388,4 +440,38 @@ function Splash() {
       </div>
     </div>
   )
+}
+
+// A crash in one screen shouldn't take the app with it.
+//
+// Without this, an error anywhere below renders nothing at all — which
+// is indistinguishable from a blank screen and gives nobody anything
+// to report. This says what happened and leaves the tabs working.
+class Guard extends React.Component {
+  constructor(p) { super(p); this.state = { err: null } }
+  static getDerivedStateFromError(err) { return { err } }
+  componentDidCatch(err) { console.error('screen crashed:', err) }
+  render() {
+    if (!this.state.err) return this.props.children
+    return (
+      <div style={{ ...page, paddingTop: 80 }}>
+        <div style={{ ...T.h2 }}>Something went wrong on this screen</div>
+        <div style={{ ...T.body, marginTop: 10, lineHeight: 1.6 }}>
+          The other tabs still work. If it keeps happening, tell Luke what
+          you were doing.
+        </div>
+        <div style={{ ...T.small, fontSize: 12, marginTop: 14,
+          fontFamily: 'ui-monospace, monospace', color: C.mute }}>
+          {String(this.state.err?.message || this.state.err)}
+        </div>
+        <button onClick={() => this.setState({ err: null })}
+          style={{ marginTop: 22, background: C.card2,
+            border: `1px solid ${C.line}`, borderRadius: 999,
+            padding: '13px 22px', fontSize: 14.5, fontWeight: 600,
+            color: C.ink, cursor: 'pointer', fontFamily: F }}>
+          Try again
+        </button>
+      </div>
+    )
+  }
 }

@@ -12,7 +12,7 @@ import Empty from '../components/Empty'
 
 export default function Today({ profile, week, programme, half, onOpen,
                                 onSetRace, onTakeClubRace, onProgress, onCoaches, onPlan,
-                                prediction, sections }) {
+                                prediction, sections, onReady }) {
   const [sessions, setSessions] = useState([])
   const [day, setDay] = useState(new Date().getDay() || 7)
   const [ready, setReady] = useState(false)
@@ -24,7 +24,10 @@ export default function Today({ profile, week, programme, half, onOpen,
   const [running, setRunning] = useState([])
 
   useEffect(() => {
-    if (!week) { setReady(true); return }
+    // No week is still a finished load. Missing this left the splash
+    // sitting over the whole app, which reads as every screen being
+    // blank rather than as one that failed to fire.
+    if (!week) { setReady(true); onReady?.(); return }
     Promise.all([
       getSessions(week.id).then(async list => {
         setSessions(list)
@@ -38,13 +41,15 @@ export default function Today({ profile, week, programme, half, onOpen,
       }),
       getCoaches().then(setCoaches).catch(() => {}),
       getRunningWeek().then(setRunning).catch(() => {}),
-    ]).finally(() => setReady(true))
+    ]).finally(() => { setReady(true); onReady?.() })
     // Keyed on the id, not the object. App re-renders on every profile
     // patch, and depending on `week` itself meant a fresh object could
     // refire all four queries — skeleton, then content, again.
   }, [week?.id, profile?.id])
 
-  if (!ready) return <SkeletonToday />
+  // No skeleton. The splash is still over the top until this paints,
+  // and two loading states for one wait is what reads as a flash.
+  if (!ready) return <div style={{ minHeight: '60vh' }} />
 
   const h = new Date().getHours()
   const greeting = h < 12 ? 'Morning' : h < 18 ? 'Afternoon' : 'Evening'

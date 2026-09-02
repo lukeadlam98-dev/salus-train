@@ -226,7 +226,8 @@ export default function Run({ userId, session, onBack, onDone }) {
                   )}
                 </div>
                 <div style={{ fontSize: 13, color: C.sub, ...T.num }}>
-                  {s.seconds ? fmt(s.seconds) : `${s.metres}m`}
+                  {s.seconds ? fmt(s.seconds)
+                    : s.metres ? `${s.metres}m` : 'when done'}
                 </div>
               </div>
             ))}
