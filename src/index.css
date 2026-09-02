@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: #0B0A09;
+  color: #EFEAE1;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, button { font-family: inherit; }
+button { -webkit-appearance: none; }
+
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+/* Motion is for marking moments, not decorating them. Four things
+   earn an animation: arriving on a screen, a sheet coming up, a set
+   being logged, and a number that has just changed. Everything else
+   moves because it has to. */
+
+@keyframes fade  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes up    { from { opacity: 0; transform: translateY(10px) }
+                   to   { opacity: 1; transform: none } }
+@keyframes sheet { from { transform: translateY(101%) } to { transform: none } }
+@keyframes spin  { to { transform: rotate(360deg) } }
+@keyframes pulse { 0%,100% { opacity: .4 } 50% { opacity: 1 } }
+
+/* A logged set. Overshoots slightly, because a tick that just appears
+   doesn't feel like anything happened. */
+@keyframes pop {
+  0%   { transform: scale(.86) }
+  55%  { transform: scale(1.07) }
+  100% { transform: scale(1) }
+}
+
+/* A number that has changed — a new projected finish, a score going up. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(7px) }
+  to   { opacity: 1; transform: none }
+}
+
+/* Loading shapes. Deliberately slow: a fast shimmer reads as anxious. */
+@keyframes shimmer {
+  0%, 100% { opacity: .55 }
+  50%      { opacity: 1 }
+}
+
+/* Something worth noticing, once. Used on a first projected finish. */
+@keyframes glow {
+  0%   { box-shadow: 0 0 0 0 var(--gLine) }
+  70%  { box-shadow: 0 0 0 12px transparent }
+  100% { box-shadow: 0 0 0 0 transparent }
+}
+
+/* Staggered arrival, so a list assembles rather than snapping in. */
+.stagger > * { animation: up .34s cubic-bezier(.2,.7,.3,1) both }
+.stagger > *:nth-child(1) { animation-delay: 0ms }
+.stagger > *:nth-child(2) { animation-delay: 45ms }
+.stagger > *:nth-child(3) { animation-delay: 90ms }
+.stagger > *:nth-child(4) { animation-delay: 130ms }
+.stagger > *:nth-child(5) { animation-delay: 165ms }
+.stagger > *:nth-child(n+6) { animation-delay: 195ms }
+
+/* Anything tappable acknowledges the tap. */
+button:active, [role="button"]:active { transform: scale(.985) }
+button { transition: transform .12s ease, background .18s ease, opacity .18s ease }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001s !important; transition-duration: .001s !important }
+}
+
+/* ---------------------------------------------------------------
+   No zoom, no bounce, no accidental selection.
+
+   The viewport meta stops pinch-zoom on most browsers. iOS Safari
+   ignores it in some versions, so touch-action does the same job at
+   the CSS level — belt and braces, because a member mid-set who
+   pinches by accident and can't get back is a real problem.
+
+   overscroll-behavior stops the rubber-band bounce that makes a web
+   app feel like a web page.
+   --------------------------------------------------------------- */
+
+html, body {
+  touch-action: pan-y;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Double-tap to zoom is a separate gesture from pinch. This kills it
+   on anything tappable, which is where it actually gets triggered. */
+button, [role="button"], a, label {
+  touch-action: manipulation;
+}
+
+/* Long-press to select is never wanted on a control, and on iOS it
+   brings up a callout menu mid-session. Text you'd want to copy — a
+   coach's note, a notice — is exempt. */
+button, [role="button"], .nb, svg {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Inputs must stay selectable, and must not trigger the iOS zoom-on-
+   focus. Safari zooms any input under 16px, which is why every field
+   in this app is 15px or larger and the ones that aren't get bumped
+   here rather than in the component. */
+input, textarea, select {
+  -webkit-user-select: text;
+  user-select: text;
+  font-size: max(16px, 1em);
+}
+
+/* The page itself never scrolls sideways. The chip rows do, on
+   purpose, but their negative margins let the whole document move
+   with them — which feels like the app is loose. */
+html, body, #root { overflow-x: hidden; max-width: 100vw; }
+
+/* Scrollers keep their own overflow, without a visible bar. */
+.nb { -ms-overflow-style: none; scrollbar-width: none; overscroll-behavior-x: contain; }
+.nb::-webkit-scrollbar { display: none; }
+
+/* The mark on the splash. Slow enough to read as breathing rather
+   than blinking. */
+@keyframes breathe {
+  0%, 100% { opacity: .45; transform: scale(.96) }
+  50%      { opacity: 1;   transform: scale(1) }
+}
+
+/* A bar that fills from empty on arrival, rather than appearing
+   already full. The number was always there; showing it move is what
+   makes progress feel like progress. */
+@keyframes fill {
+  from { width: 0 }
+}
+
+/* The splash leaves rather than cutting. Slightly slower than the
+   fade in, because arriving should feel unhurried. */
+@keyframes splashOut {
+  from { opacity: 1 }
+  to   { opacity: 0; visibility: hidden }
+}
