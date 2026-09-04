@@ -12,37 +12,66 @@
 // Six minutes of warm-up building to race pace, then N blocks. Under
 // week six a block is three two-minute pieces; from week six it's a
 // ten-minute block of 3 easy, 3 moderate, 4 at or above race pace.
-export function intervalSegments({ minutes = 24, blocks = 4 }) {
+// "Two kilometres an hour under race pace" is a coaching instruction,
+// not a number you can run to. Given a 5km it becomes one.
+const kmhFromPace = perKmSeconds => 3600 / perKmSeconds
+const paceFromKmh = kmh => 3600 / kmh
+
+function racePacePerKm(fivekSeconds) {
+  if (!fivekSeconds) return null
+  return (fivekSeconds / 5) * 1.06     // race pace sits above 5km pace
+}
+
+// Blocks get a name and a round number so the board can fold them.
+// Without those, five identical blocks printed as fifteen lines —
+// which is the same mistake the compromised session made.
+export function intervalSegments({ minutes = 24, blocks = 4,
+                                   fivekSeconds = null }) {
   const long = minutes >= 60
+  const race = racePacePerKm(fivekSeconds)
+  const at = down => {
+    if (!race) return null
+    return Math.round(paceFromKmh(kmhFromPace(race) - down))
+  }
+
+  // The warm-up doesn't end on a timer.
+  //
+  // Two minutes runs out while somebody is still walking from the
+  // car, and then the app is counting down a race-pace block at
+  // somebody standing in a car park. It waits for a tap instead —
+  // the one stage where the member, not the clock, knows when it's
+  // finished.
   const out = [
-    { kind: 'warmup', seconds: 120, label: 'Warm up',
-      note: 'Easy. Just moving.' },
-    { kind: 'warmup', seconds: 120, label: 'Build',
-      note: 'A notch quicker.' },
-    { kind: 'warmup', seconds: 120, label: 'Up to pace',
-      note: 'Find race pace and hold it briefly.' },
+    { kind: 'warmup', seconds: 120, blockLabel: 'Warm up', label: 'Easy',
+      note: 'Just moving. Tap when you’re ready.', open: true },
+    { kind: 'warmup', seconds: 120, blockLabel: 'Warm up', label: 'Build',
+      note: 'A notch quicker.', pace: at(1) },
+    { kind: 'warmup', seconds: 120, blockLabel: 'Warm up', label: 'Up to pace',
+      note: 'Find race pace and hold it briefly.', pace: at(0) },
   ]
 
   for (let b = 0; b < blocks; b++) {
+    const common = { blockLabel: 'The blocks', round: b + 1, rounds: blocks,
+      block: b + 1, blocks }
     if (long) {
-      out.push({ kind: 'easy',  seconds: 180, block: b + 1, blocks,
-        label: 'Easy',     note: 'Recovery pace, but keep running.' })
-      out.push({ kind: 'mod',   seconds: 180, block: b + 1, blocks,
-        label: 'Moderate', note: 'A kilometre an hour under race pace.' })
-      out.push({ kind: 'race',  seconds: 240, block: b + 1, blocks,
-        label: 'Race pace', note: 'This is the one that counts.' })
+      out.push({ ...common, kind: 'easy', seconds: 180, label: 'Easy',
+        note: 'Recovery pace, but keep running.', pace: at(2) })
+      out.push({ ...common, kind: 'mod', seconds: 180, label: 'Moderate',
+        note: 'A kilometre an hour under race pace.', pace: at(1) })
+      out.push({ ...common, kind: 'race', seconds: 240, label: 'Race pace',
+        note: 'This is the one that counts.', pace: at(0) })
     } else {
-      out.push({ kind: 'easy',  seconds: 120, block: b + 1, blocks,
-        label: '2 under',  note: 'Two kilometres an hour under race pace.' })
-      out.push({ kind: 'mod',   seconds: 120, block: b + 1, blocks,
-        label: '1 under',  note: 'One under. Still comfortable.' })
-      out.push({ kind: 'race',  seconds: 120, block: b + 1, blocks,
-        label: 'Race pace', note: 'Hold it. Next block starts easy again.' })
+      out.push({ ...common, kind: 'easy', seconds: 120, label: '2 under',
+        note: 'Two kilometres an hour under race pace.', pace: at(2) })
+      out.push({ ...common, kind: 'mod', seconds: 120, label: '1 under',
+        note: 'One under. Still comfortable.', pace: at(1) })
+      out.push({ ...common, kind: 'race', seconds: 120, label: 'Race pace',
+        note: 'Hold it. Next block starts easy again.', pace: at(0) })
     }
   }
 
-  out.push({ kind: 'cool', seconds: 300, label: 'Cool down',
-    note: 'Easy for five, then you\u2019re done.' })
+  out.push({ kind: 'cool', seconds: 300, blockLabel: 'Cool down',
+    label: 'Easy', note: 'Five easy, then you’re done.', open: true })
   return out
 }
 
@@ -77,24 +106,55 @@ export function speedSegments(ladder = '10 × 200m', restSeconds = 60,
     }
   })
 
-  const out = [{ kind: 'warmup', seconds: 600, label: 'Warm up',
-    note: 'Ten minutes easy, then a few strides.' }]
+  // Recovery is prescribed, not left blank.
+  //
+  // A rest that says only "90s" is two instructions short: nobody
+  // knows whether to walk it, jog it, or how hard. Give the recovery
+  // its own pace and the member stops guessing — and stops jogging
+  // their recovery at tempo, which is the commonest way an interval
+  // session gets ruined.
+  const easy = fivekSeconds
+    ? Math.round((fivekSeconds / 5) * 1.30) : null
 
-  reps.forEach((r, i) => {
-    const t = target(r.metres, fivekSeconds)
-    out.push({ kind: 'rep', metres: r.metres, rep: i + 1, reps: reps.length,
-      label: `${r.metres}m`, seconds: t,
-      note: t ? 'Hold this the whole way. Same effort as the first one.'
-              : 'Above race pace. Tap when you finish.' })
-    if (i < reps.length - 1) {
-      out.push({ kind: 'rest', seconds: restSeconds, rep: i + 1,
-        reps: reps.length, label: 'Rest',
-        note: 'Walk or jog. Get the breathing back before the next one.' })
+  const out = [{ kind: 'warmup', seconds: 600, blockLabel: 'Warm up',
+    label: 'Easy', note: 'Ten minutes easy, then a few strides.',
+    pace: easy, open: true }]
+
+  // Grouped by distance, not flattened into one long list.
+  //
+  // "5 × 400m, 3 × 300m" is two sets, and folding it as eight
+  // identical rounds showed five 400s and threw the 300s away. Each
+  // distance is its own set with its own count — which is also how
+  // it's written on the plan, and how a coach says it.
+  const groups = []
+  reps.forEach(r => {
+    const last = groups[groups.length - 1]
+    if (last && last.metres === r.metres) last.n++
+    else groups.push({ metres: r.metres, n: 1 })
+  })
+
+  let done = 0
+  groups.forEach((g, gi) => {
+    const t = target(g.metres, fivekSeconds)
+    for (let i = 0; i < g.n; i++) {
+      done++
+      out.push({ kind: 'rep', metres: g.metres, rep: done, reps: reps.length,
+        blockLabel: `${g.n} × ${g.metres}m`, round: i + 1, rounds: g.n,
+        label: `${g.metres}m`, seconds: t,
+        note: t ? 'Hold this the whole way. Same effort as the first one.'
+                : 'Above race pace. Tap when you finish.' })
+      const lastOverall = gi === groups.length - 1 && i === g.n - 1
+      if (!lastOverall) {
+        out.push({ kind: 'rest', seconds: restSeconds, rep: done,
+          reps: reps.length, blockLabel: `${g.n} × ${g.metres}m`,
+          pace: easy, round: i + 1, rounds: g.n, label: 'Jog',
+          note: 'Walk or jog. Get the breathing back before the next one.' })
+      }
     }
   })
 
-  out.push({ kind: 'cool', seconds: 300, label: 'Cool down',
-    note: 'Five easy.' })
+  out.push({ kind: 'cool', seconds: 300, blockLabel: 'Cool down',
+    label: 'Easy', note: 'Five easy.', pace: easy, open: true })
   return out
 }
 
@@ -134,7 +194,7 @@ export function compromisedSegments({ rounds = 5, distance_m = 1000,
     if (station1) out.push({ kind: 'station', rep: r + 1, reps: rounds,
       label: station1, note: 'Straight into it, no standing about.' })
     if (station2) out.push({ kind: 'station', rep: r + 1, reps: rounds,
-      label: station2, note: 'Then the rest. Tap when it\u2019s done.' })
+      label: station2, note: 'Then the rest. Tap when it’s done.' })
 
     if (r < rounds - 1) out.push({ kind: 'rest', seconds: restSeconds,
       rep: r + 1, reps: rounds, label: 'Rest',
@@ -142,7 +202,7 @@ export function compromisedSegments({ rounds = 5, distance_m = 1000,
   }
 
   out.push({ kind: 'cool', seconds: 300, label: 'Cool down',
-    note: 'Five easy. Don\u2019t skip it — this one takes a while to come down from.' })
+    note: 'Five easy. Don’t skip it — this one takes a while to come down from.' })
   return out
 }
 
@@ -152,14 +212,16 @@ export function compromisedSegments({ rounds = 5, distance_m = 1000,
 // long", and breaking that into pieces would be inventing structure
 // that isn't in the session.
 export function easySegments({ minutes = 30 }) {
-  return [{ kind: 'zone', seconds: minutes * 60, label: 'Zone 2',
-    note: 'Conversational. If you can\u2019t talk, slow down.' }]
+  return [{ kind: 'zone', seconds: minutes * 60, blockLabel: 'The run',
+    label: 'Zone 2',
+    note: 'Conversational. If you can’t talk, slow down.' }]
 }
 
 export function segmentsFor(session, fivekSeconds = null) {
   switch (session?.run_kind) {
     case 'intervals': return intervalSegments({
-      minutes: session.run_minutes, blocks: session.run_blocks })
+      minutes: session.run_minutes, blocks: session.run_blocks,
+      fivekSeconds })
 
     case 'speed': return speedSegments(session.run_ladder, 60, fivekSeconds)
 
@@ -247,4 +309,62 @@ export function paceTarget(seg, fivekSeconds) {
 
   const seconds = Math.round(metres * (fivekSeconds / 5000) * f)
   return { metres, seconds, perKm: perKm(seconds, metres) }
+}
+
+// ---------------- reading a session that never said what it was ----
+//
+// Both the Intervals and the Long Mixed session in the live database
+// have a title, a tag and a paragraph, and no run_kind — so
+// segmentsFor returned null, the screen had nothing to guide, and a
+// member got a paragraph and a Log button. The paragraph describes
+// the session precisely. Nobody had told the code to read it.
+//
+// This is a fallback, not a replacement: an explicit run_kind always
+// wins. It exists so a coach forgetting one dropdown costs a bit of
+// precision rather than the whole session.
+
+const KINDS = [
+  [/compromis|hyrox|station/i,          'compromised'],
+  [/interval|block|fartlek/i,           'intervals'],
+  [/speed|ladder|\d+\s*[×x]\s*\d+\s*m/i,'speed'],
+  [/long/i,                             'long'],
+  [/easy|zone\s*2|recovery|maff/i,      'easy'],
+]
+
+export function inferRun(session) {
+  if (!session) return null
+  if (session.run_kind) return session
+
+  const text = [session.title, session.tag, session.focus, session.summary,
+    session.description, session.body].filter(Boolean).join(' ')
+  if (!text) return session
+
+  const kind = (KINDS.find(([re]) => re.test(text)) || [])[1]
+  if (!kind) return session
+
+  const num = re => {
+    const m = text.match(re)
+    return m ? Number(m[1]) : null
+  }
+
+  // "30 minutes of work in 5 six-minute blocks" — both numbers are
+  // there in plain English, and both matter.
+  const blocks = num(/(\d+)\s*(?:six-minute|ten-minute|\w+-minute)?\s*blocks?\b/i)
+  const workMin = num(/(\d+)\s*min(?:ute)?s?\s+of\s+work/i)
+  const anyMin = num(/(\d+)\s*min(?:ute)?s?\b/i)
+  const ladder = (text.match(/\d+\s*[×x]\s*\d+\s*m(?:\s*,\s*\d+\s*[×x]\s*\d+\s*m)*/i) || [])[0]
+  const rounds = num(/(\d+)\s*rounds?\b/i)
+  const km = num(/(\d+(?:\.\d+)?)\s*km\b/i)
+
+  return {
+    ...session,
+    run_kind: kind,
+    run_minutes: session.run_minutes || workMin || anyMin ||
+      session.est_min || 30,
+    run_blocks: session.run_blocks || blocks || 4,
+    run_ladder: session.run_ladder || ladder || null,
+    run_reps: session.run_reps || rounds || 5,
+    run_distance_m: session.run_distance_m || (km ? km * 1000 : null),
+    inferred: true,
+  }
 }

@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, Fragment } from 'react'
 import { C, T, F } from '../lib/theme'
 import { fmt } from '../lib/format'
 import { saveRun, getAerobicZone } from '../lib/data'
-import { segmentsFor, paceTarget, mmss, totalMetresIn } from '../lib/runplan'
+import { segmentsFor, paceTarget, mmss, totalMetresIn, inferRun }
+  from '../lib/runplan'
 import { ergTarget } from '../lib/ergs'
 import { sessionSegments } from '../lib/metcon'
-import { whiteboard, boardSummary } from '../lib/whiteboard'
+import { whiteboard, boardSummary, summaryLine } from '../lib/whiteboard'
 import { getSessionDetail } from '../lib/data'
 import { getLatestBenchmarks } from '../lib/data'
 import { Card, Label, Btn, Back, Ico, I, page } from '../components/ui'
@@ -50,7 +51,11 @@ export default function Run({ userId, session, onBack, onDone }) {
 
   // Rebuilt when the 5km lands, so the reps get a target rather than
   // waiting for a tap. Without one they still work, they just ask.
-  const raw = segmentsFor(session, fivek) || sessionSegments(blocks)
+  // An explicit run_kind first, then the blocks a coach wrote, then
+  // what the session says about itself in its own description.
+  const raw = segmentsFor(session, fivek)
+    || sessionSegments(blocks)
+    || segmentsFor(inferRun(session), fivek)
 
   // A pace on every piece we can work one out for. The 5km is already
   // on file and the plan was spending it on a countdown; the same
@@ -64,6 +69,11 @@ export default function Run({ userId, session, onBack, onDone }) {
       target: `${mmss(e.split)} /500m`,
       targetTime: mmss(e.seconds),
       targetFor: e.machine === 'bike' ? 'BIKE' : e.machine.toUpperCase() }
+
+    // Some segments arrive with a pace already worked out — an
+    // interval block knows what "two under race pace" means once
+    // there's a 5km on file.
+    if (seg.pace) return { ...seg, target: `${mmss(seg.pace)} /km` }
 
     const t = paceTarget(seg, fivek)
     if (!t) return seg
@@ -253,7 +263,16 @@ export default function Run({ userId, session, onBack, onDone }) {
           shared by every line in the session. */}
       {board && (
         <>
-          <Label style={{ margin: '26px 0 11px' }}>
+          {/* The shape of the session in one line, above the board.
+              Somebody who has done this session before doesn't need
+              to read it again — they need to remember which one it
+              is. */}
+          <div style={{ ...T.small, fontSize: 13, lineHeight: 1.5,
+            marginTop: 22, color: C.sub }}>
+            {summaryLine(board)}
+          </div>
+
+          <Label style={{ margin: '20px 0 11px' }}>
             {session?.est_min || summary.minutes} MIN
           </Label>
 
@@ -296,8 +315,18 @@ export default function Run({ userId, session, onBack, onDone }) {
                       <div style={{ padding: '10px 0',
                         borderTop: `1px solid ${C.line}`,
                         fontSize: 15, fontWeight: 600, letterSpacing: '-.01em',
+                        display: 'flex', alignItems: 'baseline', gap: 10,
                         color: l.rest ? C.mute : C.ink }}>
-                        {l.move}
+                        <span style={{ flex: 1 }}>{l.move}</span>
+                        {/* The pace, where the session knows one.
+                            "Two under race pace" is an instruction;
+                            5:22 is something you can run. */}
+                        {l.hint && (
+                          <span style={{ fontSize: 13, fontWeight: 800,
+                            ...T.num, color: C.sub, flexShrink: 0 }}>
+                            {l.hint}
+                          </span>
+                        )}
                       </div>
                     </Fragment>
                   ))}

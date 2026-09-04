@@ -53,8 +53,15 @@ function split(label) {
 
 const up = s => s ? s[0].toUpperCase() + s.slice(1) : s
 
+// Past an hour, minutes stop being readable — 100:00 is a number you
+// have to do arithmetic on to understand.
 const mmss = s => {
   const n = Math.round(s)
+  if (n >= 3600) {
+    const h = Math.floor(n / 3600)
+    const m = Math.round((n % 3600) / 60)
+    return m ? `${h}h ${m}m` : `${h}h`
+  }
   return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`
 }
 
@@ -80,12 +87,25 @@ export function whiteboard(plan) {
       // instruction, so it goes in the number column and the word
       // follows it.
       if (s.kind === 'rest') return {
-        qty: s.seconds ? mmss(s.seconds) : null, move: 'Rest', rest: true }
+        qty: s.seconds ? mmss(s.seconds) : null,
+        // "Jog" and "Rest" are different instructions and the plan
+        // now says which — so don't overwrite it with 'Rest'.
+        move: up(norm(s.label)) || 'Rest',
+        hint: s.pace ? `${mmss(s.pace)} /km` : null, rest: true }
+
+      // A timed piece already has its number: the clock. Splitting
+      // its label as well turned "2 under" into a quantity of 2 and
+      // a movement called "Under" — the words are the instruction,
+      // not a count.
+      if (s.seconds) return {
+        qty: mmss(s.seconds), move: up(norm(s.label)),
+        hint: s.pace ? `${mmss(s.pace)} /km` : null, rest: false }
 
       const { qty, move } = split(s.label)
       return {
-        qty: qty || (s.seconds ? mmss(s.seconds) : s.metres ? `${s.metres}m` : null),
+        qty: qty || (s.metres ? `${s.metres}m` : null),
         move: up(move) || up(norm(s.label)),
+        hint: s.pace ? `${mmss(s.pace)} /km` : null,
         rest: false,
       }
     })
@@ -107,3 +127,48 @@ export const boardSummary = board => ({
     board.reduce((a, b) => a + (b.seconds || 0), 0) / 60),
   rounds: board.reduce((a, b) => Math.max(a, b.rounds), 1),
 })
+
+// The session on one line.
+//
+// A board is the right thing once somebody has opened a session. It's
+// the wrong thing on a card in a list, where they're deciding whether
+// today is the hard one. For that you want the shape of the session in
+// a glance — the shorthand a coach would say out loud:
+//
+//   6 min warm-up → 5× (2 min @ 5:22 + 2 min @ 4:56 + 2 min @ 4:33)
+//   → 5 min cool-down
+//
+// Same fold as the board, written across instead of down.
+export function summaryLine(board) {
+  if (!board?.length) return null
+
+  const mins = secs => {
+    const m = Math.round(secs / 60)
+    return m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}`
+                   : `${m} min`
+  }
+
+  // A step reads the way it would be said: the distance or duration,
+  // then the pace if there is one. Dropping the distance turned
+  // "400m in 1:34" into a bare 1:34, which is the number and not the
+  // instruction.
+  const step = l => {
+    const named = l.move && !/^easy$/i.test(l.move)
+    return [l.qty, l.hint ? `@ ${l.hint.replace(' /km', '')}`
+                          : named ? l.move.toLowerCase() : null]
+      .filter(Boolean).join(' ')
+  }
+
+  const part = b => {
+    // A block that doesn't repeat is one stage, not a list of its
+    // parts. Nobody wants the three pieces of a warm-up on a card —
+    // they want to know it's six minutes and then the work starts.
+    if (b.rounds < 2) {
+      return b.seconds ? `${mins(b.seconds)} ${(b.label || '').toLowerCase()}`
+                       : (b.label || '').toLowerCase()
+    }
+    return `${b.rounds}× (${b.lines.map(step).join(' + ')})`
+  }
+
+  return board.map(part).filter(Boolean).join(' \u2192 ')
+}

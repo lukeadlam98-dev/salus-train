@@ -54,7 +54,12 @@ export default function Guided({ plan, title, onFinish, onQuit, extra }) {
   const clock = pausedAt || now
   const inSeg = Math.floor((clock - segStart) / 1000)
   const total = Math.floor((clock - totalStart - shift) / 1000)
-  const timed = !!seg?.seconds
+  // An open stage has a suggested length and no deadline. The clock
+  // runs, nothing advances, and the member decides — which is right
+  // for a warm-up (they might still be walking to the track) and for
+  // a cool-down (nobody should be hurried off one).
+  const open = !!seg?.open
+  const timed = !!seg?.seconds && !open
   const left = timed ? seg.seconds - inSeg : null
 
   // "6 × 100m Strides" is six efforts, not one instruction. Read the
@@ -260,6 +265,13 @@ export default function Guided({ plan, title, onFinish, onQuit, extra }) {
               color: C.mute }}>
               {fmt(inSeg)}
             </div>
+            {/* What it's meant to be, without making it a deadline. */}
+            {open && seg.seconds && (
+              <div style={{ fontSize: 11, fontWeight: 800,
+                letterSpacing: '.14em', color: C.mute, marginTop: 6 }}>
+                ABOUT {Math.round(seg.seconds / 60)} MIN
+              </div>
+            )}
             {extra?.(seg)}
           </div>
         )}
