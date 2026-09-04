@@ -2,11 +2,81 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>salus-train</title>
+
+    <!--
+      No zooming.
+
+      maximum-scale and user-scalable=no stop the pinch and the
+      double-tap zoom. viewport-fit=cover lets the app paint under the
+      notch and the home indicator, which is what the
+      env(safe-area-inset-*) padding throughout the app assumes.
+
+      Worth being honest about the trade: disabling zoom removes an
+      accessibility affordance. It's defensible here because the type
+      is large, the contrast is high, and the app respects the phone's
+      own Display Zoom and Larger Text settings — but it is a real
+      cost, not a free win.
+    -->
+    <meta name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1,
+               minimum-scale=1, user-scalable=no, viewport-fit=cover" />
+
+    <meta name="theme-color" content="#0A0A09" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Salus Train" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!--
+      Installable. On iOS this is not a nicety: push notifications
+      only exist for an app on the home screen, so the manifest and
+      the icon are load-bearing rather than polish.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+
+    <title>Salus Train</title>
+
+    <!--
+      The first paint.
+
+      Without this the browser paints its own white page until the
+      JavaScript has loaded and React has mounted — so opening the app
+      went white, then flashed a logo, then faded in. Three stages
+      where there should be one.
+
+      Setting the background here and drawing the mark in plain HTML
+      means the very first frame the phone paints is already the app.
+      No white, no flash. The mark is up before a single byte of
+      JavaScript has run.
+    -->
+    <style>
+      html, body { margin: 0; background: #090908; }
+      #boot {
+        position: fixed; inset: 0; background: #090908;
+        display: grid; place-items: center; z-index: 9999;
+      }
+      #boot svg { animation: bootIn .5s ease both; }
+      /* Holds still, then breathes. A mark that starts pulsing
+         immediately reads as a spinner; one that arrives and settles
+         reads as the app opening. */
+      @keyframes bootIn {
+        from { opacity: 0; transform: scale(.92) }
+        to   { opacity: 1; transform: scale(1) }
+      }
+      #boot.ready { opacity: 0; visibility: hidden;
+        transition: opacity .4s ease, visibility .4s; }
+    </style>
   </head>
   <body>
+    <div id="boot">
+      <svg width="58" height="58" viewBox="0 0 40 40" fill="none"
+        stroke="#F6F3EE" stroke-width="2.2" stroke-linecap="round">
+        <line x1="20.00" y1="13.00" x2="20.00" y2="2.00"/><line x1="22.94" y1="10.96" x2="24.64" y2="5.73"/><line x1="24.11" y1="14.34" x2="30.58" y2="5.44"/><line x1="27.69" y1="14.42" x2="32.14" y2="11.18"/><line x1="26.66" y1="17.84" x2="37.12" y2="14.44"/><line x1="29.50" y1="20.00" x2="35.00" y2="20.00"/><line x1="26.66" y1="22.16" x2="37.12" y2="25.56"/><line x1="27.69" y1="25.58" x2="32.14" y2="28.82"/><line x1="24.11" y1="25.66" x2="30.58" y2="34.56"/><line x1="22.94" y1="29.04" x2="24.64" y2="34.27"/><line x1="20.00" y1="27.00" x2="20.00" y2="38.00"/><line x1="17.06" y1="29.04" x2="15.36" y2="34.27"/><line x1="15.89" y1="25.66" x2="9.42" y2="34.56"/><line x1="12.31" y1="25.58" x2="7.86" y2="28.82"/><line x1="13.34" y1="22.16" x2="2.88" y2="25.56"/><line x1="10.50" y1="20.00" x2="5.00" y2="20.00"/><line x1="13.34" y1="17.84" x2="2.88" y2="14.44"/><line x1="12.31" y1="14.42" x2="7.86" y2="11.18"/><line x1="15.89" y1="14.34" x2="9.42" y2="5.44"/><line x1="17.06" y1="10.96" x2="15.36" y2="5.73"/>
+      </svg>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

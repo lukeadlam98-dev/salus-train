@@ -1,16 +1,42 @@
-# React + Vite
+# Salus Train — LATEST BUILD
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+If you are unsure whether you have the right files, check this:
 
-Currently, two official plugins are available:
+    grep -c "signInWithPassword" src/screens/Auth.jsx
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+It should print 1. And this folder must exist: src/admin
 
-## React Compiler
+## Installing
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Delete the old src first — copying over the top merges rather than
+replaces, and leaves stale files behind.
 
-## Expanding the Oxlint configuration
+    cd ~/Documents/salus-train
+    rm -rf src
+    cp -r ~/Downloads/salus-latest/src ./src
+    npm run dev
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## SQL
+
+Run sql/00_run_all.sql in the Supabase SQL Editor. It contains
+everything in order and is safe to run more than once.
+
+Then uncomment the last two lines of that file, put your email in,
+and run them — that is what makes you an admin.
+
+## What's in this build
+
+- Email and password login. No inbox round trip.
+- Back office at ?admin, or You → Back office.
+- Week duplicator: copy a whole week, then change the loads.
+- Photo upload from inside the session editor.
+- Draft weeks, so half-written sessions stay hidden.
+- Video splash with a photo poster underneath.
+- Logo as a PNG, inverted on the light theme.
+
+## Still to do
+
+- Weeks 2–8 have no content yet. Use Duplicate.
+- Coaches can't reply to messages — no coach-side view yet.
+- No offline handling. Gym wifi will drop sets.
+- No reordering of blocks or lines in the back office.

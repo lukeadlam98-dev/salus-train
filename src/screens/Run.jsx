@@ -3,10 +3,11 @@ import { C, T, F } from '../lib/theme'
 import { fmt } from '../lib/format'
 import { saveRun, getAerobicZone } from '../lib/data'
 import { segmentsFor, paceTarget, mmss, totalMetresIn } from '../lib/runplan'
+import { ergTarget } from '../lib/ergs'
 import { sessionSegments } from '../lib/metcon'
 import { whiteboard, boardSummary } from '../lib/whiteboard'
 import { getSessionDetail } from '../lib/data'
-import { getBenchmarks } from '../lib/data'
+import { getLatestBenchmarks } from '../lib/data'
 import { Card, Label, Btn, Back, Ico, I, page } from '../components/ui'
 import Guided from '../components/Guided'
 import Keypad from '../components/Keypad'
@@ -28,11 +29,14 @@ import Keypad from '../components/Keypad'
 export default function Run({ userId, session, onBack, onDone }) {
   const [zone, setZone] = useState(null)
   const [fivek, setFivek] = useState(null)
+  const [row2k, setRow2k] = useState(null)
 
   useEffect(() => {
     getAerobicZone(userId).then(setZone).catch(() => {})
-    getBenchmarks(userId).then(b => setFivek(b?.fivek?.value_s || null))
-      .catch(() => {})
+    getLatestBenchmarks(userId).then(b => {
+      setFivek(b?.fivek?.value_s || null)
+      setRow2k(b?.row?.value_s || null)
+    }).catch(() => {})
   }, [userId])
 
   // A session written as blocks — a warm-up then five rounds of a
@@ -52,6 +56,15 @@ export default function Run({ userId, session, onBack, onDone }) {
   // on file and the plan was spending it on a countdown; the same
   // number said as a pace is the thing you can actually run to.
   const plan = raw && raw.map(seg => {
+    // Running comes off the 5km, machines come off the 2km row.
+    // A rower and a ski have a pace worth holding just as much as a
+    // kilometre does, and the station cards have never said one.
+    const e = ergTarget(seg.label, row2k)
+    if (e) return { ...seg,
+      target: `${mmss(e.split)} /500m`,
+      targetTime: mmss(e.seconds),
+      targetFor: e.machine === 'bike' ? 'BIKE' : e.machine.toUpperCase() }
+
     const t = paceTarget(seg, fivek)
     if (!t) return seg
     return { ...seg,
@@ -333,7 +346,10 @@ export default function Run({ userId, session, onBack, onDone }) {
           {seg.targetTime && (
             <div style={{ fontSize: 11, fontWeight: 800,
               letterSpacing: '.14em', color: C.mute, marginTop: 3 }}>
-              {seg.targetTime} FOR THE {seg.targetFor.toUpperCase()}
+              {seg.targetTime} {seg.targetFor === 'ROW' ||
+                seg.targetFor === 'SKI' || seg.targetFor === 'BIKE'
+                ? 'ON THE ' + seg.targetFor
+                : 'FOR THE ' + seg.targetFor.toUpperCase()}
             </div>
           )}
         </div>

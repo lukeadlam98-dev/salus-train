@@ -50,3 +50,14 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+// The service worker, registered once at boot rather than when
+// somebody opens the settings screen — a push can only arrive on a
+// device where it's already running, and the first thing a member
+// does after allowing notifications is close the app.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch(() => {})
+  })
+}

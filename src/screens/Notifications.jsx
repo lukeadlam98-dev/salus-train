@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { C, T, F } from '../lib/theme'
 import { getNotifyPrefs, setNotifyPref } from '../lib/data'
+import { subscribe, unsubscribe, isSubscribed, sendTest } from '../lib/push'
 import { Card, Label, Back, page } from '../components/ui'
 
 // What the app is allowed to interrupt for.
@@ -17,7 +18,7 @@ import { Card, Label, Back, page } from '../components/ui'
 const GROUPS = [
   {
     title: 'WORTH INTERRUPTING FOR',
-    note: 'On by default. Each of these is something you asked for or something you\u2019d want to know today.',
+    note: 'On by default. Each of these is something you asked for or something you’d want to know today.',
     items: [
       ['coach_reply', 'A coach replies',
        'You asked something and they answered.'],
@@ -56,10 +57,47 @@ export default function Notifications({ userId, onBack }) {
   const [ready, setReady] = useState(false)
   const [perm, setPerm] = useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported')
+  // Permission is per member; a subscription is per device. Somebody
+  // who allowed notifications on their phone hasn't allowed them on
+  // the laptop they're reading this on, and the screen should say so.
+  const [subbed, setSubbed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [said, setSaid] = useState(null)
 
   useEffect(() => {
     getNotifyPrefs(userId).then(setP).finally(() => setReady(true))
+    isSubscribed().then(setSubbed).catch(() => {})
   }, [userId])
+
+  // Asking and subscribing are one action from a tap. Safari will
+  // only show the permission prompt inside a user gesture, so
+  // everything that has to happen happens in this handler.
+  async function allow() {
+    setBusy(true); setSaid(null)
+    const r = await subscribe(userId)
+    setBusy(false)
+    setPerm(typeof Notification !== 'undefined'
+      ? Notification.permission : 'unsupported')
+    if (r.ok) { setSubbed(true); setSaid('This device is set up.') }
+    else if (r.reason === 'denied') setSaid('You said no — it has to go back on in your phone settings.')
+    else setSaid(r.message || 'That didn’t work.')
+  }
+
+  async function off() {
+    setBusy(true)
+    await unsubscribe().catch(() => {})
+    setBusy(false); setSubbed(false); setSaid('This device is silenced.')
+  }
+
+  async function test() {
+    setBusy(true); setSaid(null)
+    const r = await sendTest()
+    setBusy(false)
+    setSaid(r.ok
+      ? (r.sent ? 'Sent — it should arrive in a second.'
+                : 'Nothing to send to. Try Allow first.')
+      : 'Couldn’t send it: ' + (r.message || 'unknown'))
+  }
 
   // Push on iOS only exists for a home-screen app. In a browser tab
   // the API isn't there at all, so there's no point offering it —
@@ -104,26 +142,50 @@ export default function Notifications({ userId, onBack }) {
             then.
           </div>
         </Card>
-      ) : canPush && perm !== 'granted' ? (
+      ) : canPush ? (
         <Card style={{ marginTop: 20, background: C.card2 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>
             {perm === 'denied' ? 'Notifications are blocked'
-                               : 'Allow notifications'}
+              : subbed ? 'This device is set up'
+              : 'Allow notifications'}
           </div>
           <div style={{ ...T.small, marginTop: 8, lineHeight: 1.6 }}>
             {perm === 'denied'
-              ? 'You said no at some point. It has to be turned back on in your phone\u2019s settings for this app — the browser won\u2019t ask twice.'
+              ? 'You said no at some point. It has to be turned back on in your phone’s settings for this app — the browser won’t ask twice.'
+              : subbed
+              ? 'Every device you use needs turning on separately, so a phone and a laptop are two decisions.'
               : 'One tap, then the settings below take effect.'}
           </div>
-          {perm === 'default' && (
-            <button onClick={() => Notification.requestPermission()
-                .then(setPerm)}
-              style={{ width: '100%', marginTop: 14, border: 'none',
-                borderRadius: 999, padding: '14px 0', fontSize: 15,
-                fontWeight: 700, background: C.g, color: C.bg,
-                cursor: 'pointer', fontFamily: F }}>
-              Allow
-            </button>
+
+          {perm !== 'denied' && (
+            <div style={{ display: 'flex', gap: 9, marginTop: 14 }}>
+              <button onClick={subbed ? off : allow} disabled={busy}
+                style={{ flex: 1, border: subbed ? `1px solid ${C.line}` : 'none',
+                  borderRadius: 999, padding: '14px 0', fontSize: 15,
+                  fontWeight: 700, cursor: 'pointer', fontFamily: F,
+                  background: subbed ? 'transparent' : C.g,
+                  color: subbed ? C.sub : C.bg, opacity: busy ? .5 : 1 }}>
+                {busy ? '…' : subbed ? 'Silence this device' : 'Allow'}
+              </button>
+              {subbed && (
+                /* A push sent from the phone to itself through the
+                   server, so it proves the key, the subscription, the
+                   function and the worker — not just that the browser
+                   can draw a notification. */
+                <button onClick={test} disabled={busy}
+                  style={{ border: `1px solid ${C.line}`, borderRadius: 999,
+                    padding: '14px 18px', fontSize: 15, fontWeight: 700,
+                    background: 'transparent', color: C.sub,
+                    cursor: 'pointer', fontFamily: F, opacity: busy ? .5 : 1 }}>
+                  Test
+                </button>
+              )}
+            </div>
+          )}
+
+          {said && (
+            <div style={{ ...T.small, fontSize: 12.5, marginTop: 11,
+              color: C.sub }}>{said}</div>
           )}
         </Card>
       ) : null}

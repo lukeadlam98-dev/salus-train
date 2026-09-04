@@ -33,6 +33,24 @@ export async function getBenchmarks(userId, week = 1) {
   return out
 }
 
+// The current number for every test, whenever it was set.
+//
+// getBenchmarks defaults to week 1, which is right for the test
+// screen — that's the row it edits — and wrong for anything that
+// wants to know what somebody can do today. A member who retested
+// in week 6 was still being paced off their week 1 5km.
+export async function getLatestBenchmarks(userId) {
+  const { data, error } = await supabase
+    .from('benchmarks').select('*').eq('user_id', userId)
+    .order('week', { ascending: true })
+  if (error) throw error
+  const out = {}
+  ;(data || []).forEach(r => {
+    if (r.value_num != null || r.value_s != null) out[r.key] = r
+  })
+  return out
+}
+
 export async function saveBenchmark(userId, key, { num, secs, week = 1 }) {
   const { data, error } = await supabase.from('benchmarks').upsert({
     user_id: userId, key, week,
