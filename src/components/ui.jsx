@@ -182,7 +182,13 @@ export const Ico = ({ d, s = 17, c = C.ink, w = 1.9 }) => (
 // into paths. Export as SVG, open the file in a text editor, and
 // paste the contents between the backticks. Strip any fill="#..."
 // so it inherits colour.
-const SVG_MARK = ``
+// Traced from the PNG: eight "U"s and eight "I"s, 45 degrees apart,
+// so only one of each is stored and the rest are rotations of it.
+// Colour comes from currentColor, which is why one mark works on the
+// dark app, the light back office and over a photo — the white PNG
+// was invisible against the white back office, which is what a
+// second file for a second background always costs.
+const SVG_MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><defs><path id="su" d="M81.04 58.14 80.70 58.54 80.13 58.60 78.31 60.42 78.29 60.93 77.86 61.33 77.88 62.13 77.40 62.70 77.43 65.64 77.83 65.99 78.31 67.41 88.28 77.38 89.21 77.40 91.52 75.12 91.52 74.56 81.71 64.84 81.69 63.04 82.41 62.38 95.99 62.43 96.29 62.13 96.26 58.33 95.99 58.12Z"/><path id="si" d="M73.28 71.03 71.03 73.84 82.84 85.54 85.54 82.71Z"/></defs><g fill="currentColor"><use href="#su" transform="rotate(-0.33 50 50)"/><use href="#si" transform="rotate(0.00 50 50)"/><use href="#su" transform="rotate(44.67 50 50)"/><use href="#si" transform="rotate(45.00 50 50)"/><use href="#su" transform="rotate(89.67 50 50)"/><use href="#si" transform="rotate(90.00 50 50)"/><use href="#su" transform="rotate(134.67 50 50)"/><use href="#si" transform="rotate(135.00 50 50)"/><use href="#su" transform="rotate(179.67 50 50)"/><use href="#si" transform="rotate(180.00 50 50)"/><use href="#su" transform="rotate(224.67 50 50)"/><use href="#si" transform="rotate(225.00 50 50)"/><use href="#su" transform="rotate(269.67 50 50)"/><use href="#si" transform="rotate(270.00 50 50)"/><use href="#su" transform="rotate(314.67 50 50)"/><use href="#si" transform="rotate(315.00 50 50)"/></g></svg>`
 
 export const Mark = ({ s = 30, onPhoto, src, c }) => {
   const colour = c || (onPhoto ? P.ink : C.ink)
