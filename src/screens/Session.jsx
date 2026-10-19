@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { C, T, F } from '../lib/theme'
 import { fmt, DAYS, round2h } from '../lib/format'
-import { getSessionDetail, startWorkout, saveSet, finishWorkout } from '../lib/data'
+import { getSessionDetail, startWorkout, saveSet, finishWorkout,
+         getLastLoads } from '../lib/data'
 import { Card, Label, Btn, Chip, Back, Ico, I, page } from '../components/ui'
 import Photo from '../components/Photo'
 import { P } from '../lib/theme'
@@ -44,6 +45,7 @@ function useSwipe(onLeft, onRight) {
 export default function Session({ session, userId, benchmarks, onBack, onFinished }) {
   const [blocks, setBlocks] = useState(null)
   const [coach, setCoach] = useState(null)
+  const [last, setLast] = useState({})
   const [playing, setPlaying] = useState(false)
   const [log, setLog] = useState(null)          // workout_logs row
   const [sets, setSets] = useState({})          // "itemId.idx" -> {reps,kg,done}
@@ -69,6 +71,14 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
   )
 
   useEffect(() => { getSessionDetail(session.id).then(setBlocks) }, [session.id])
+
+  // What they lifted last time, for every movement in this session.
+  useEffect(() => {
+    if (!blocks || !userId) return
+    const ids = [...new Set(blocks.flatMap(b =>
+      (b.block_items || []).map(i => i.movements?.id).filter(Boolean)))]
+    getLastLoads(userId, ids).then(setLast).catch(() => {})
+  }, [blocks, userId])
   useEffect(() => {
     if (!session.coach_id) return
     getCoaches().then(cs => setCoach(cs.find(c => c.id === session.coach_id)))
@@ -102,6 +112,8 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
       const c = cell(item.id, j)
       if (c[field] != null && c[field] !== '') return String(c[field])
     }
+    const prev = last[item.movements?.id]
+    if (prev && prev[field] != null && prev[field] !== '') return String(prev[field])
     if (field === 'reps') return item.reps != null ? String(item.reps) : ''
     const kg = targetKg(item.movements, benchmarks)
     return kg ? String(kg) : ''
@@ -124,10 +136,22 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
 
   async function logSet(item, i) {
     const c = cell(item.id, i)
-    await writeSet(item, i, {
-      done: true,
-      reps: c.reps ?? ghost(item, i, 'reps'),
-      kg: c.kg ?? ghost(item, i, 'kg'),
+    const reps = c.reps ?? ghost(item, i, 'reps')
+    const kg   = c.kg   ?? ghost(item, i, 'kg')
+    await writeSet(item, i, { done: true, reps, kg })
+
+    // Carry them into the sets that follow, as real numbers rather
+    // than a hint. Three sets at the same weight is one entry and two
+    // taps, which is what it is in a notebook.
+    setSets(prev => {
+      const next = { ...prev }
+      for (let j = i + 1; j < (item.sets || 0); j++) {
+        const k = `${item.id}.${j}`
+        const cur = next[k] || {}
+        if (cur.done) continue
+        next[k] = { ...cur, reps: cur.reps ?? reps, kg: cur.kg ?? kg }
+      }
+      return next
     })
     setRest(item.rest_s || 90)
   }
@@ -436,11 +460,15 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
                     </div>
                     <div style={{ fontSize: 12.5, color: C.sub }}>
                       {mv?.has_time ? 'max' : `${item.reps} reps`}
-                      {kgTarget ? ` · ${kgTarget}kg` : ''}
+                      {lastNote(last[mv?.id]) || (kgTarget ? ` · ${kgTarget}kg` : '')}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div onClick={() => on
+                      ? writeSet(item, setIdx, { done: false })
+                      : logSet(item, setIdx)}
+                    style={{ display: 'flex', alignItems: 'center',
+                      cursor: 'pointer' }}>
                     <div style={{ width: 3.5, height: 38, borderRadius: 999,
                       marginRight: 9, flexShrink: 0,
                       background: on ? C.g : C.card3 }} />
@@ -584,10 +612,16 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
   )
 }
 
+// "last 60kg × 12" beats an empty box you have to remember into.
+function lastNote(prev) {
+  if (!prev || prev.kg == null) return ''
+  return ` · last ${prev.kg}kg${prev.reps ? ` \u00d7 ${prev.reps}` : ''}`
+}
+
 function Cell({ v, ph, on, act, unit, onTap }) {
   const filled = v != null && v !== ''
   return (
-    <button onClick={onTap} style={{
+    <button onClick={e => { e.stopPropagation(); onTap?.() }} style={{
       height: 45, borderRadius: 12, cursor: 'pointer', fontFamily: F,
       // Fill does the work colour used to: done is filled and
       // inverted, next is outlined, waiting is flat.

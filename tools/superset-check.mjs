@@ -60,6 +60,7 @@ const stub = {
            export const saveSet = async () => ({})
            export const finishWorkout = async () => ({})
            export const getCoaches = async () => []
+           export const getLastLoads = async () => ({})
            export const getProgrammes = async () => []`
         : `export const supabase = { from: () => ({ select: () => ({}) }) }
            export default {}`,

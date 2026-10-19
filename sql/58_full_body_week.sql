@@ -92,9 +92,9 @@ begin
   -- ---------- the three days ----------
   for r in
     select * from (values
-      (1, 'Full Body A', 'Legs & back'),
-      (3, 'Full Body B', 'Squat & press'),
-      (5, 'Full Body C', 'Legs & hinge')
+      (1, 'Legs & Pull',   'Press, pull and glutes'),
+      (3, 'Squat & Press', 'Squat, shoulders and legs'),
+      (5, 'Hinge & Arms',  'Hinge, row and arms')
     ) as t(day, title, focus)
   loop
     select id into v_sess from public.sessions
@@ -121,18 +121,18 @@ begin
   -- ---------- blocks ----------
   for r in
     select * from (values
-  (1, 1, 'A', 'A', 'superset',  3, 90, null),
-  (1, 2, 'B', 'B', 'superset',  3, 90, null),
-  (1, 3, 'C', 'C', 'superset',  3, 90, null),
-  (1, 4, 'D', 'Finisher', 'intervals', 5, 40, 20),   -- bike 20s on / 40s off
-  (3, 1, 'A', 'A', 'superset',  3, 90, null),
-  (3, 2, 'B', 'B', 'superset',  3, 90, null),
-  (3, 3, 'C', 'C', 'superset',  3, 75, null),
-  (3, 4, 'D', 'Finisher', 'intervals', 4, 60, 30),   -- ski 30s on / 60s off
-  (5, 1, 'A', 'A', 'superset',  3, 90, null),
-  (5, 2, 'B', 'B', 'superset',  3, 90, null),
-  (5, 3, 'C', 'C', 'superset',  2, 60, null),
-  (5, 4, 'D', 'Finisher', 'intervals', 4, 60, 20)    -- sled 20s on / 60s off
+  (1, 1, 'A', 'Legs & pull', 'superset',  3, 90, null),
+  (1, 2, 'B', 'Push & pull', 'superset',  3, 90, null),
+  (1, 3, 'C', 'Glutes & single leg', 'superset',  3, 90, null),
+  (1, 4, 'D', 'Bike intervals', 'intervals', 5, 40, 20),   -- bike 20s on / 40s off
+  (3, 1, 'A', 'Squat & press', 'superset',  3, 90, null),
+  (3, 2, 'B', 'Shoulders & lats', 'superset',  3, 90, null),
+  (3, 3, 'C', 'Quads & hamstrings', 'superset',  3, 75, null),
+  (3, 4, 'D', 'Ski intervals', 'intervals', 4, 60, 30),   -- ski 30s on / 60s off
+  (5, 1, 'A', 'Squat & hinge', 'superset',  3, 90, null),
+  (5, 2, 'B', 'Push & row', 'superset',  3, 90, null),
+  (5, 3, 'C', 'Arms', 'superset',  2, 60, null),
+  (5, 4, 'D', 'Sled intervals', 'intervals', 4, 60, 20)    -- sled 20s on / 60s off
     ) as t(day, ord, letter, label, fmt, rounds, rest_s, work_s)
   loop
     select s.id into v_sess from public.sessions s

@@ -768,3 +768,50 @@ export async function getUnread() {
 }
 
 export const markRoomSeen = () => supabase.rpc('mark_room_seen')
+
+// What you lifted last time, by movement.
+//
+// The set grid only ever looked backwards within the session you were
+// standing in: set two offered set one's number. Across weeks it
+// remembered nothing, so every Monday started from a blank box and
+// you had to recall what you did seven days ago, or guess.
+//
+// Keyed on the movement rather than the block item, because next
+// week's leg press is a different row in the database but the same
+// thing in the gym.
+export async function getLastLoads(userId, movementIds) {
+  if (!userId || !movementIds?.length) return {}
+
+  const { data: logs } = await supabase
+    .from('workout_logs')
+    .select('id, ended_at')
+    .eq('user_id', userId)
+    .not('ended_at', 'is', null)
+    .order('ended_at', { ascending: false })
+    .limit(40)
+  if (!logs?.length) return {}
+
+  const order = new Map(logs.map((l, i) => [l.id, i]))   // 0 = most recent
+  const { data: sets } = await supabase
+    .from('set_logs')
+    .select('workout_log_id, kg, reps, block_items!inner(movement_id)')
+    .in('workout_log_id', logs.map(l => l.id))
+    .in('block_items.movement_id', movementIds)
+    .eq('done', true)
+
+  const out = {}
+  for (const s of sets || []) {
+    const mv = s.block_items?.movement_id
+    if (!mv) continue
+    const rank = order.get(s.workout_log_id)
+    const best = out[mv]
+    // The most recent session wins; within it, the heaviest set, which
+    // is the number worth beating rather than the warm-up.
+    if (!best || rank < best.rank ||
+        (rank === best.rank && (s.kg || 0) > (best.kg || 0))) {
+      out[mv] = { rank, kg: s.kg, reps: s.reps,
+                  at: logs[rank]?.ended_at }
+    }
+  }
+  return out
+}

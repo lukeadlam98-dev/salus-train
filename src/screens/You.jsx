@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { C, T, F } from '../lib/theme'
 import { fmt, hhmm } from '../lib/format'
 import { saveBenchmark, getMyScore, setPhoto,
-         getAerobicZone, setBirthYear } from '../lib/data'
+         getAerobicZone, setBirthYear, getMyProgramme } from '../lib/data'
 import { Card, Label, Btn, Avatar, Ico, I, Info, page } from '../components/ui'
 import Paces from './Paces'
 import Pillars from './Pillars'
@@ -49,6 +49,12 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
     const v = benchmarks[b.key]
     return v ? (b.time ? v.value_s : v.value_num) : ''
   }).join('|')
+
+  // A projected HYROX finish means nothing to somebody on a strength
+  // block. The tile goes rather than sitting there saying "—".
+  const [prog, setProg] = useState(null)
+  useEffect(() => { getMyProgramme().then(setProg).catch(() => {}) }, [])
+  const racing = !!(prog?.race_name || prog?.race_date || prog?.uses_half)
 
   useEffect(() => { getMyScore(userId).then(setScore).catch(() => {}) },
     [userId, bmKey, half?.total])
@@ -119,7 +125,8 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
 
       {/* ---- where you're at ---- */}
       <Section title="WHERE YOU'RE AT" />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid',
+        gridTemplateColumns: racing ? '1fr 1fr' : '1fr', gap: 10 }}>
         <Card style={{ padding: 15 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <Label>SALUS SCORE</Label>
@@ -154,6 +161,7 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
           </div>
         </Card>
 
+        {racing && (
         <Card style={{ padding: 15 }}>
           <Label style={{ color: half?.projected ? C.g : C.mute }}>
             {half?.projected ? 'PROJECTED' : 'NO HALF YET'}
@@ -167,6 +175,7 @@ export default function You({ userId, profile, benchmarks, setBenchmarks,
             {half?.projected ? 'at HYROX pace' : 'run the Salus Half'}
           </div>
         </Card>
+        )}
       </div>
 
       {/* ---- the numbers ---- */}

@@ -41,6 +41,11 @@ export default function Block({ profile, programme, onBack, onOpen,
   if (!ready) return <div style={page}><SkeletonList rows={6} /></div>
 
   const days = daysUntil(profile?.race_date)
+  // Racing is a property of the programme, not of the person. Somebody
+  // on a 1:1 full-body block has a race date on their profile from the
+  // last time they raced; that is not what they're training for now.
+  const racing = !!(programme?.race_name || programme?.race_date
+                    || programme?.uses_half)
   // Their week, from the profile. Not inferred from what's finished —
   // someone who joins in week three or takes a fortnight off isn't
   // served by a "first unfinished week" rule.
@@ -208,8 +213,30 @@ export default function Block({ profile, programme, onBack, onOpen,
         })}
       </div>
 
-      {/* ---- and then the race ---- */}
-      {days !== null && (
+      {!racing && totalSessions > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13,
+          marginTop: 20, padding: '16px 15px', background: C.card,
+          border: `1px solid ${C.gLine}`, borderRadius: 14 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 700 }}>
+              Week {current} of {weeks.length}
+            </div>
+            <div style={{ fontSize: 12.5, color: C.sub, marginTop: 3 }}>
+              {totalDone} of {totalSessions} sessions done
+              {totalHours ? ` · ${totalHours} hours in` : ''}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 20, fontWeight: 800, ...T.num }}>
+              {totalSessions ? Math.round((totalDone / totalSessions) * 100) : 0}%
+            </div>
+            <div style={{ fontSize: 10.5, color: C.mute }}>through</div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- and then the race, if there is one ---- */}
+      {days !== null && racing && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 13,
           marginTop: 20, padding: '16px 15px', background: C.card,
           border: `1px solid ${C.gLine}`, borderRadius: 14 }}>
