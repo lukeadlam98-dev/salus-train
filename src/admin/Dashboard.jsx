@@ -114,13 +114,26 @@ export default function Dashboard({ programme, onGo }) {
           sub={`${people.length - active} haven't`} />
         <RingStat value={tested} total={people.length} label="Fully tested"
           sub={`${people.length - tested} to go`} />
+        {/* One person's time isn't an average, and a strength block
+            has no race to project towards. Saying "average projection
+            from 1 half" was both at once. */}
         <Panel>
           <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.04em',
-            fontVariantNumeric: 'tabular-nums' }}>{avg ? hhmm(avg) : '—'}</div>
+            fontVariantNumeric: 'tabular-nums' }}>
+            {withHalf.length ? hhmm(avg) : '—'}
+          </div>
           <div style={{ fontSize: 12, color: C.sub, marginTop: 5,
-            fontWeight: 600 }}>Average projection</div>
+            fontWeight: 600 }}>
+            {withHalf.length > 1 ? 'Average projection'
+              : withHalf.length === 1 ? `${withHalf[0].name || 'One member'}'s projection`
+              : 'No projection yet'}
+          </div>
           <div style={{ fontSize: 11.5, color: C.mute, marginTop: 2 }}>
-            from {withHalf.length} half{withHalf.length === 1 ? '' : 's'}
+            {withHalf.length > 1
+              ? `across ${withHalf.length} halves`
+              : withHalf.length === 1
+                ? 'the only half run so far'
+                : 'nobody has run the half'}
           </div>
         </Panel>
       </div>
