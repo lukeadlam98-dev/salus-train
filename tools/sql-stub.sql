@@ -211,6 +211,16 @@ as $$
   end;
 $$;
 
+create table if not exists public.programme_images (
+  id           uuid primary key default gen_random_uuid(),
+  programme_id uuid references public.programmes on delete cascade not null,
+  url          text not null,
+  caption      text,
+  ord          integer,
+  created_at   timestamptz default now(),
+  unique (programme_id, url)
+);
+
 -- The view 54 rebuilds, as it stood before.
 create view public.wotw_board as select null::uuid as session_id;
 
