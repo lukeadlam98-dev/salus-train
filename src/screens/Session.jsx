@@ -46,6 +46,7 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
   const [blocks, setBlocks] = useState(null)
   const [coach, setCoach] = useState(null)
   const [last, setLast] = useState({})
+  const workRef = useRef(null)
   const [playing, setPlaying] = useState(false)
   const [log, setLog] = useState(null)          // workout_logs row
   const [sets, setSets] = useState({})          // "itemId.idx" -> {reps,kg,done}
@@ -73,8 +74,14 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
   useEffect(() => { getSessionDetail(session.id).then(setBlocks) }, [session.id])
 
   useEffect(() => {
-    if (live) window.scrollTo({ top: 0, behavior: 'auto' })
-  }, [live])
+    if (!live) return
+    const t = setTimeout(() => {
+      const el = workRef.current
+      if (el?.scrollIntoView) el.scrollIntoView({ block: 'start', behavior: 'auto' })
+      else window.scrollTo?.({ top: 0 })
+    }, 0)
+    return () => clearTimeout(t)
+  }, [live, bi])
 
   // What they lifted last time, for every movement in this session.
   useEffect(() => {
@@ -422,6 +429,10 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
           ))}
         </Card>
       )}
+
+      {/* Where the work starts, and where starting a session lands.
+          scrollMarginTop keeps it clear of the bar at the top. */}
+      <div ref={workRef} style={{ scrollMarginTop: 14 }} />
 
       {/* Paired above, stacked below — the same cells either way, so
           logging works identically and only the arrangement changes. */}

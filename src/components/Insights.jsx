@@ -12,7 +12,9 @@ import Img from './Img'
 export default function Insights({ days, raceDate, programme, half, prediction,
                                    week, sessions = [], done = 0, onSetRace,
                                    onTakeClubRace, onOpenRace }) {
-  const set = days !== null && days !== undefined
+  const racing = !!(programme?.race_name || programme?.race_date
+                    || programme?.uses_half)
+  const set = racing && days !== null && days !== undefined
   const total = programme?.total_weeks || 8
   const real = sessions.filter(s => s.kind !== 'rest')
 
@@ -58,13 +60,22 @@ export default function Insights({ days, raceDate, programme, half, prediction,
                 {programme?.race_name || 'Your competition'} · {raceDate}
               </div>
             </>
-          ) : (
+          ) : racing ? (
             <>
               <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-.03em' }}>
                 Add my competition
               </div>
               <div style={{ fontSize: 12.5, color: C.sub, marginTop: 5 }}>
                 and the whole block lines up behind it
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-.03em' }}>
+                {programme?.name || 'Your block'}
+              </div>
+              <div style={{ fontSize: 12.5, color: C.sub, marginTop: 5 }}>
+                Week {week || 1} of {total}
               </div>
             </>
           )}
@@ -114,7 +125,7 @@ export default function Insights({ days, raceDate, programme, half, prediction,
       </div>
 
       {/* ---- the one thing to do about it ---- */}
-      {!set && programme?.race_date ? (
+      {!racing ? null : !set && programme?.race_date ? (
         <div style={{ background: C.card2, borderTop: `1px solid ${C.line}`,
           padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
