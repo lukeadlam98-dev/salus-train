@@ -423,12 +423,20 @@ export async function getClubOverview() {
   const people = (members.data || []).filter(m => m.role !== 'admin')
   const wk = weeks.data || []
 
+  // 1:1 programmes are all called the same thing by default, so the
+  // list needs the client's name to tell two "Full Body" rows apart.
+  const byId = new Map((members.data || []).map(m => [m.id, m.name]))
+
   return (progs.data || []).map(p => {
     const mine = people.filter(m => m.programme_id === p.id)
     const ws = wk.filter(w => w.programme_id === p.id)
     return {
       ...p,
-      members: mine.length,
+      clientName: p.client_id ? (byId.get(p.client_id) || 'a member') : null,
+      // Club counts leave admins out — they're staff, not a cohort.
+      // A 1:1 is one person by definition, and that person is often a
+      // coach trying their own programme, so it read as empty.
+      members: p.client_id ? 1 : mine.length,
       weeksLive: ws.filter(w => w.published).length,
       weeksTotal: ws.length,
       active: mine.filter(m => m.last_trained &&
@@ -678,4 +686,41 @@ export async function copyClientWeek(fromId, toId, idx = 1) {
   })
   if (error) throw error
   return data
+}
+
+// One client's programme at a glance: the weeks, what's written in
+// each, and what they've actually done. The club dashboard answers
+// "how is the cohort moving" — meaningless for a programme of one.
+export async function clientSummary(programmeId, clientId) {
+  const { data: weeks, error } = await supabase
+    .from('weeks').select('*').eq('programme_id', programmeId).order('idx')
+  if (error) throw error
+  const ids = (weeks || []).map(w => w.id)
+  if (!ids.length) return { weeks: [], lastTrained: null }
+
+  const [{ data: sessions }, { data: logs }] = await Promise.all([
+    supabase.from('sessions').select('id, week_id, day, title, kind')
+      .in('week_id', ids),
+    supabase.from('workout_logs')
+      .select('session_id, ended_at, elapsed_s')
+      .eq('user_id', clientId).not('ended_at', 'is', null),
+  ])
+
+  const done = new Set((logs || []).map(l => l.session_id))
+  const last = (logs || []).reduce((a, l) =>
+    !a || l.ended_at > a ? l.ended_at : a, null)
+
+  return {
+    lastTrained: last,
+    weeks: (weeks || []).map(w => {
+      const mine = (sessions || []).filter(s => s.week_id === w.id)
+      const real = mine.filter(s => s.kind !== 'rest')
+      return {
+        ...w,
+        sessions: real.length,
+        done: real.filter(s => done.has(s.id)).length,
+        titles: real.sort((a, b) => a.day - b.day).map(s => s.title),
+      }
+    }),
+  }
 }

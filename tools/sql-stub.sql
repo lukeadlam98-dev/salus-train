@@ -9,7 +9,10 @@ end $$;
 
 create schema if not exists auth;
 
-create table auth.users (id uuid primary key default gen_random_uuid());
+create table auth.users (
+  id    uuid primary key default gen_random_uuid(),
+  email text
+);
 
 -- Stands in for the request's user. Tests set it.
 create function auth.uid() returns uuid language sql stable as $$
@@ -212,15 +215,21 @@ $$;
 create view public.wotw_board as select null::uuid as session_id;
 
 -- Two members and a club programme, so the tests have somewhere to start.
-insert into auth.users (id) values
-  ('11111111-1111-1111-1111-111111111111'),
-  ('22222222-2222-2222-2222-222222222222'),
-  ('33333333-3333-3333-3333-333333333333');
+insert into auth.users (id, email) values
+  ('11111111-1111-1111-1111-111111111111', 'luke@salus.house'),
+  ('22222222-2222-2222-2222-222222222222', 'rakhee@example.com'),
+  ('33333333-3333-3333-3333-333333333333', 'jade@example.com');
+
+-- A second account with the same name, which is the whole reason the
+-- seed matches on email.
+insert into auth.users (id, email) values
+  ('44444444-4444-4444-4444-444444444444', 'luke.adlam98@gmail.com');
 
 insert into public.profiles (id, name, role) values
   ('11111111-1111-1111-1111-111111111111', 'Luke Adlam', 'admin'),
   ('22222222-2222-2222-2222-222222222222', 'Rakhee Patel', 'member'),
-  ('33333333-3333-3333-3333-333333333333', 'Jade Smith', 'member');
+  ('33333333-3333-3333-3333-333333333333', 'Jade Smith', 'member'),
+  ('44444444-4444-4444-4444-444444444444', 'Luke', 'admin');
 
 insert into public.programmes (slug, name, weeks, live, sort, archived)
   values ('road-to-hyrox', 'Road to HYROX', 8, true, 1, false);

@@ -299,3 +299,114 @@ function NewClient({ members, onClose, onDone }) {
     </>
   )
 }
+
+/* ---------------- one client's overview ----------------
+   What the club dashboard is for a cohort, this is for one person:
+   which week they're on, what's written, what they've done. No
+   station averages, no race projection, no "3 quiet for a week" —
+   a programme of one has no spread to compare against. */
+
+export function ClientOverview({ programme, onOpenWeek }) {
+  const [d, setD] = useState(null)
+  const [err, setErr] = useState(null)
+  const [who, setWho] = useState(null)
+
+  useEffect(() => {
+    if (!programme?.id || !programme?.client_id) return
+    api.clientSummary(programme.id, programme.client_id)
+      .then(setD).catch(e => setErr(e.message))
+    api.listClientProgrammes()
+      .then(rs => setWho(rs.find(r => r.id === programme.id)))
+      .catch(() => {})
+  }, [programme?.id])
+
+  const since = d?.lastTrained
+    ? Math.floor((Date.now() - new Date(d.lastTrained)) / 86400000)
+    : null
+  const written = (d?.weeks || []).reduce((a, w) => a + w.sessions, 0)
+  const done = (d?.weeks || []).reduce((a, w) => a + w.done, 0)
+  const onWeek = who?.week_idx || 1
+
+  return (
+    <div style={{ maxWidth: 820 }}>
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.13em',
+        color: C.mute }}>1:1 · PRIVATE TO ONE MEMBER</div>
+      <h1 style={{ ...T.h1, marginTop: 6 }}>
+        {who?.client_name || 'This client'}
+      </h1>
+      <p style={{ ...T.body, marginTop: 7 }}>
+        {programme?.name} · week {onWeek} of {programme?.weeks}
+        {since == null
+          ? ' · hasn’t trained yet'
+          : since === 0 ? ' · trained today'
+          : since === 1 ? ' · trained yesterday'
+          : ` · last trained ${since} days ago`}
+      </p>
+
+      {err && <Note tone="bad">{err}</Note>}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
+        gap: 12, margin: '22px 0' }}>
+        <Stat n={written} of="sessions written" />
+        <Stat n={done} of="done" />
+        <Stat n={written ? `${Math.round((done / written) * 100)}%` : '—'}
+          of="of the programme" />
+      </div>
+
+      <div style={{ background: C.card, border: `1px solid ${C.line}`,
+        borderRadius: 14, padding: '4px 16px', boxShadow: C.shadow }}>
+        {(d?.weeks || []).map(w => (
+          <div key={w.id} onClick={() => onOpenWeek?.(w)}
+            style={{ display: 'flex', alignItems: 'center', gap: 13,
+              padding: '14px 0', cursor: 'pointer',
+              borderTop: `1px solid ${C.line}` }}>
+            <div style={{ width: 22, fontSize: 13, fontWeight: 800,
+              color: w.idx === onWeek ? C.ink : C.mute }}>{w.idx}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: 14.5, fontWeight: 700 }}>
+                  {w.phase || `Week ${w.idx}`}
+                </div>
+                {w.idx === onWeek && (
+                  <span style={{ background: C.ink, color: C.bg,
+                    borderRadius: 5, padding: '2px 7px', fontSize: 9.5,
+                    fontWeight: 800 }}>ON THIS</span>
+                )}
+                {!w.published && (
+                  <span style={{ background: C.card3, color: C.sub,
+                    borderRadius: 5, padding: '2px 7px', fontSize: 9.5,
+                    fontWeight: 800 }}>DRAFT</span>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: C.mute, marginTop: 3,
+                overflow: 'hidden', textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap' }}>
+                {w.sessions
+                  ? w.titles.join(' · ')
+                  : 'Nothing written yet'}
+              </div>
+            </div>
+            <div style={{ fontSize: 12.5, color: C.sub, flexShrink: 0 }}>
+              {w.sessions ? `${w.done}/${w.sessions}` : '—'}
+            </div>
+            <span style={{ color: C.mute, fontSize: 14 }}>›</span>
+          </div>
+        ))}
+        {!d && !err && (
+          <div style={{ ...T.body, fontSize: 13, padding: '14px 0' }}>
+            Loading…
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const Stat = ({ n, of }) => (
+  <div style={{ background: C.card, border: `1px solid ${C.line}`,
+    borderRadius: 14, padding: '15px 16px', boxShadow: C.shadow }}>
+    <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-.04em',
+      ...T.num }}>{n}</div>
+    <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{of}</div>
+  </div>
+)

@@ -112,13 +112,19 @@ export default function Club({ onOpenProgramme, onGo }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ fontSize: 14.5, fontWeight: 700 }}>{p.name}</div>
-                    {!p.live && (
+                    {p.clientName && (
+                      <span style={{ background: C.ink, color: C.bg,
+                        borderRadius: 5, padding: '2px 7px', fontSize: 9.5,
+                        fontWeight: 800 }}>1:1</span>
+                    )}
+                    {!p.live && !p.clientName && (
                       <span style={{ background: C.card3, color: C.sub,
                         borderRadius: 5, padding: '2px 7px', fontSize: 9.5,
                         fontWeight: 800 }}>DRAFT</span>
                     )}
                   </div>
                   <div style={{ fontSize: 11.5, color: C.mute, marginTop: 3 }}>
+                    {p.clientName ? `${p.clientName} · ` : ''}
                     {p.weeksLive} of {p.weeksTotal} weeks published
                   </div>
                 </div>

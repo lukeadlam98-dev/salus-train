@@ -7,9 +7,23 @@ deadlocks and you'll wait five seconds for an error instead.
 Then, in the Supabase SQL editor:
 
 1. `54_one_to_one.sql`
-2. `55_rakhee.sql`
-3. `56_copy_everything.sql`
-4. `57_name_the_programme.sql`
+2. `57_name_the_programme.sql`
+3. `58_full_body_week.sql`
+
+**Skip `55_rakhee.sql` and `56_copy_everything.sql`.** Both matched
+members by name, and there are two called "Luke" — so they attached
+the programme to whichever row came back first, which is to say at
+random. `58` matches on email instead. Nobody shares an email.
+
+To write the same week onto somebody else, change the last line of
+`58`:
+
+```sql
+select public.seed_full_body_week1('rakhee@herdomain.com');
+```
+
+Re-running rewrites that week rather than adding a second copy, so
+once you've started editing her sessions by hand, leave it alone.
 
 Both are safe to re-run. If you'd rather paste once, `00_run_all.sql`
 now ends with both of them.

@@ -16,7 +16,7 @@ import Boards from './Boards'
 import Dashboard from './Dashboard'
 import Notices from './Notices'
 import Club from './Club'
-import Clients from './Clients'
+import Clients, { ClientOverview } from './Clients'
 
 export default function Admin({ profile, onExit }) {
   const [programmes, setProgrammes] = useState([])
@@ -206,6 +206,9 @@ export default function Admin({ profile, onExit }) {
             ? <Club
                 onOpenProgramme={p => { setProg(p); setNav({ view: 'dashboard', idx: 1 }) }}
                 onGo={v => { setSession(null); setNav({ view: v, idx: nav.idx }) }} />
+          : nav.view === 'dashboard' && prog?.client_id
+            ? <ClientOverview programme={prog}
+                onOpenWeek={w => setNav({ view: 'week', idx: w.idx })} />
           : nav.view === 'dashboard'
             ? <Dashboard programme={prog}
                 onGo={(v, idx) => { setSession(null); setNav({ view: v, idx: idx ?? nav.idx }) }} />
