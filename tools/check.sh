@@ -44,7 +44,7 @@ const out=[]
 out.push("export { default as App } from './src/App'")
 console.log(out.join('\n'))
 NODE
-npx --yes esbuild@0.21.5 .screens-entry.jsx --bundle --format=esm --jsx=automatic \
+./node_modules/.bin/esbuild .screens-entry.jsx --bundle --format=esm --jsx=automatic \
   --outfile=.screens-bundle.mjs \
   --external:react --external:react-dom --external:react/jsx-runtime \
   --external:@supabase/supabase-js \

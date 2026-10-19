@@ -13,8 +13,10 @@ export default function Clients({ onOpen, me }) {
   const [rows, setRows] = useState([])
   const [members, setMembers] = useState([])
   const [err, setErr] = useState(null)
+  const [memberErr, setMemberErr] = useState(null)
   const [adding, setAdding] = useState(false)
   const [ready, setReady] = useState(false)
+  const [gotMembers, setGotMembers] = useState(false)
 
   const load = () => api.listClientProgrammes()
     .then(r => { setRows(r); setErr(null) })
@@ -23,7 +25,14 @@ export default function Clients({ onOpen, me }) {
 
   useEffect(() => {
     load()
-    api.listMembers().then(setMembers).catch(() => {})
+    // This used to swallow its error. When the member list failed to
+    // load there was nothing to pick, so the button greyed itself out
+    // and said nothing — indistinguishable from the feature being
+    // broken, which is how it was reported.
+    api.listMembers()
+      .then(m => { setMembers(m); setMemberErr(null) })
+      .catch(e => setMemberErr(e.message))
+      .finally(() => setGotMembers(true))
   }, [])
 
   // Somebody already on a 1:1 shouldn't appear in the picker — two
@@ -48,15 +57,29 @@ export default function Clients({ onOpen, me }) {
           </p>
         </div>
         <Btn tone="solid" onClick={() => setAdding(true)}
-          disabled={free.length === 0}>
+          disabled={!gotMembers || free.length === 0}>
           New 1:1
         </Btn>
       </div>
 
-      {err && (
-        <div style={{ background: C.card2, border: `1px solid ${C.line}`,
-          borderRadius: 10, padding: '12px 15px', fontSize: 13, color: C.red,
-          marginBottom: 18 }}>{err}</div>
+      {err && <Note tone="bad">{err}</Note>}
+
+      {/* A disabled button with no reason next to it is the worst thing
+          this screen can do: there's nothing to read and nothing to try. */}
+      {memberErr && (
+        <Note tone="bad">
+          Couldn't load the member list, so there's nobody to attach a
+          programme to: {memberErr}
+        </Note>
+      )}
+      {!memberErr && gotMembers && members.length === 0 && (
+        <Note>No members found at all. If the app has members, this is
+          usually a permissions problem — check your profile's role is
+          admin.</Note>
+      )}
+      {!memberErr && gotMembers && members.length > 0 && free.length === 0 && (
+        <Note>Every member already has a 1:1. End one below to free
+          somebody up, or add the member first.</Note>
       )}
 
       {ready && !err && live.length === 0 && (
@@ -98,6 +121,13 @@ export default function Clients({ onOpen, me }) {
     </div>
   )
 }
+
+const Note = ({ children, tone }) => (
+  <div style={{ background: C.card2, border: `1px solid ${C.line}`,
+    borderRadius: 10, padding: '12px 15px', fontSize: 13,
+    color: tone === 'bad' ? C.red : C.sub, marginBottom: 18,
+    lineHeight: 1.5 }}>{children}</div>
+)
 
 function Row({ r, onOpen, onEnd, onCopied, me, muted }) {
   // Sessions written versus sessions done. A 1:1 that's been written
