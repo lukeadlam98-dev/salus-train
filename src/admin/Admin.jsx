@@ -16,6 +16,7 @@ import Boards from './Boards'
 import Dashboard from './Dashboard'
 import Notices from './Notices'
 import Club from './Club'
+import Clients from './Clients'
 
 export default function Admin({ profile, onExit }) {
   const [programmes, setProgrammes] = useState([])
@@ -112,11 +113,16 @@ export default function Admin({ profile, onExit }) {
             border: `1px solid ${C.line}`, borderRadius: 8, padding: '9px 10px',
             fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: F,
             marginBottom: 6 }}>
-          {programmes.map(p => (
+          {/* Club programmes only. A 1:1 is reached through its client,
+              not by scrolling past it looking for the real ones. */}
+          {programmes.filter(p => !p.client_id).map(p => (
             <option key={p.id} value={p.id}>
               {p.name}{p.live ? '' : ' · draft'}
             </option>
           ))}
+          {prog?.client_id && (
+            <option value={prog.id}>{prog.name}</option>
+          )}
         </select>
         <button onClick={() => setNewProg(true)} style={{ width: '100%',
           background: 'transparent', border: `1px dashed ${C.line}`,
@@ -128,6 +134,14 @@ export default function Admin({ profile, onExit }) {
         <SideItem on={nav.view === 'dashboard'} onClick={() => go('dashboard')}>
           <span style={{ flex: 1 }}>Overview</span>
         </SideItem>
+
+        {prog?.client_id && (
+          <div style={{ background: C.card3, borderRadius: 8,
+            padding: '8px 9px', margin: '0 0 10px', fontSize: 11,
+            fontWeight: 700, letterSpacing: '-.005em', color: C.ink }}>
+            1:1 · private to one member
+          </div>
+        )}
 
         <SideLabel style={{ marginTop: 14 }}>WEEKS</SideLabel>
         {weeks.map(w => (
@@ -163,7 +177,7 @@ export default function Admin({ profile, onExit }) {
         {[['nav', 'Screens & tabs'], ['home', 'Programmes & words'],
           ['boards', 'Leaderboards'], ['multiplier', 'The multiplier'], ['notices', 'Notices'],
           ['movements', 'Movements'], ['photos', 'Photos'],
-          ['members', 'Members']].map(([k, l]) => (
+          ['members', 'Members'], ['clients', '1:1 clients']].map(([k, l]) => (
           <SideItem key={k} on={nav.view === k} onClick={() => go(k)}>
             <span style={{ flex: 1 }}>{l}</span>
           </SideItem>
@@ -215,6 +229,17 @@ export default function Admin({ profile, onExit }) {
             : nav.view === 'movements' ? <Movements />
             : nav.view === 'photos'    ? <Photos />
             : nav.view === 'members'   ? <Members openId={nav.member} />
+            : nav.view === 'clients'   ? <Clients
+                                            me={profile?.id}
+                                            onOpen={async id => {
+                                              const list = await api.listProgrammes()
+                                              setProgrammes(list)
+                                              const p = list.find(x => x.id === id)
+                                              if (!p) { setErr('That programme has gone.'); return }
+                                              setProg(p)
+                                              setSession(null)
+                                              setNav({ view: 'week', idx: 1 })
+                                            }} />
             : <div style={T.body}>Nothing here.</div>}
       </div>
 

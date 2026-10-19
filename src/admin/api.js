@@ -631,3 +631,51 @@ export async function addProgrammeImage(programmeId, url, ord) {
 
 export const removeProgrammeImage = id =>
   supabase.from('programme_images').delete().eq('id', id)
+
+/* ---------------- 1:1 clients ---------------- */
+// A private programme attached to one member. The listing comes from
+// a view that already refuses to return anything to a non-admin, so
+// there is no filtering to forget here.
+export async function listClientProgrammes() {
+  const { data, error } = await supabase
+    .from('client_programmes').select('*')
+  if (error) {
+    // The migration not having run is a different problem from there
+    // being no clients, and saying so saves a confusing empty screen.
+    if (/client_programmes|client_id/i.test(error.message || '')) {
+      const e = new Error('Run sql/54_one_to_one.sql first — the 1:1 tables aren’t there yet.')
+      e.needsMigration = true
+      throw e
+    }
+    throw error
+  }
+  return data || []
+}
+
+export async function createClientProgramme(clientId, name, weeks = 4) {
+  const { data, error } = await supabase.rpc('create_client_programme', {
+    p_client: clientId, p_name: name || null, p_weeks: Number(weeks) || 4,
+  })
+  if (error) throw error
+  return data
+}
+
+// Detach rather than delete: the sessions written stay, and the member
+// goes back to whichever club programme they pick. Deleting is the
+// Manage weeks screen's job, with its cost stated.
+export async function endClientProgramme(programmeId) {
+  const { error } = await supabase.from('programmes')
+    .update({ archived: true }).eq('id', programmeId)
+  if (error) throw error
+}
+
+// Give somebody else a copy of a client's week — in practice, yourself,
+// to walk through it on a phone before the client sees it. Creates
+// their 1:1 programme if they haven't got one.
+export async function copyClientWeek(fromId, toId, idx = 1) {
+  const { data, error } = await supabase.rpc('copy_client_week', {
+    p_from: fromId, p_to: toId, p_idx: Number(idx) || 1,
+  })
+  if (error) throw error
+  return data
+}

@@ -63,6 +63,10 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
   const [pad, setPad] = useState(null)
   const [live, setLive] = useState(false)
   const started = useRef(0)
+  const swipe = useSwipe(
+    () => setBi(i => Math.min(i + 1, (blocks?.length || 1) - 1)),
+    () => setBi(i => Math.max(i - 1, 0)),
+  )
 
   useEffect(() => { getSessionDetail(session.id).then(setBlocks) }, [session.id])
   useEffect(() => {
@@ -290,10 +294,21 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
   const B = blocks[bi]
   const items = B.block_items || []
 
-  const swipe = useSwipe(
-    () => setBi(i => Math.min(i + 1, blocks.length - 1)),
-    () => setBi(i => Math.max(i - 1, 0)),
-  )
+  // A superset is paired, not stacked.
+  //
+  // Two cards one above the other means "do all of A1, then all of
+  // A2", which is a different session from the one that was written.
+  // A1 and A2 share a row per set: one set of each, then rest, then
+  // go again. The rest timer belongs to the pair, not to either
+  // movement, which is why it sits under the row rather than inside
+  // a card.
+  const paired = B.format === 'superset' && items.length > 1
+  const maxSets = paired ? Math.max(...items.map(i => i.sets || 0)) : 0
+  const activeSet = paired
+    ? Array.from({ length: maxSets }).findIndex((_, s) =>
+        items.some(it => s < it.sets && !cell(it.id, s).done))
+    : -1
+  const pairRest = B.rest_s || items[0]?.rest_s || null
 
   if (guided) return (
     <Guided plan={guided} title={B.label}
@@ -379,7 +394,98 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
         </Card>
       )}
 
-      {items.map(item => {
+      {/* Paired above, stacked below — the same cells either way, so
+          logging works identically and only the arrangement changes. */}
+      {paired && Array.from({ length: maxSets }).map((_, setIdx) => {
+        const anyLeft = items.some(it =>
+          setIdx < it.sets && !cell(it.id, setIdx).done)
+        return (
+          <Card key={setIdx} style={{ marginTop: 10,
+            opacity: anyLeft ? 1 : .55,
+            transition: 'opacity .25s' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9,
+              marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 800,
+                letterSpacing: '.14em', color: C.mute }}>
+                SET {setIdx + 1} OF {maxSets}
+              </div>
+              <div style={{ flex: 1 }} />
+              {!anyLeft && (
+                <Ico d={I.check} s={14} c={C.g} w={2.6} />
+              )}
+            </div>
+
+            {items.map((item, n) => {
+              if (setIdx >= item.sets) return null
+              const mv = item.movements
+              const c = cell(item.id, setIdx)
+              const on = !!c.done
+              const kgTarget = targetKg(mv, benchmarks)
+              return (
+                <div key={item.id} style={{
+                  paddingTop: n ? 11 : 0, marginTop: n ? 11 : 0,
+                  borderTop: n ? `1px solid ${C.line}` : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline',
+                    gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800,
+                      color: C.g, ...T.num }}>
+                      {B.letter}{n + 1}
+                    </span>
+                    <div style={{ flex: 1, fontSize: 15.5, fontWeight: 700 }}>
+                      {mv?.name}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: C.sub }}>
+                      {mv?.has_time ? 'max' : `${item.reps} reps`}
+                      {kgTarget ? ` · ${kgTarget}kg` : ''}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{ width: 3.5, height: 38, borderRadius: 999,
+                      marginRight: 9, flexShrink: 0,
+                      background: on ? C.g : C.card3 }} />
+                    <div style={{ flex: 1, display: 'grid',
+                      gridTemplateColumns: '1fr 1fr 48px', gap: 8,
+                      alignItems: 'center' }}>
+                      <Cell v={c.reps} ph={ghost(item, setIdx, 'reps')}
+                        on={on} act={!on && setIdx === activeSet}
+                        onTap={() => setPad({ item, i: setIdx, field: 'reps',
+                          label: mv?.has_time ? 'sec' : 'reps',
+                          time: mv?.has_time, value: c.reps ?? '' })} />
+                      <Cell v={c.kg} ph={ghost(item, setIdx, 'kg')} on={on}
+                        unit="kg"
+                        onTap={() => setPad({ item, i: setIdx, field: 'kg',
+                          label: 'kg', value: c.kg ?? '' })} />
+                      <button onClick={() => on
+                          ? writeSet(item, setIdx, { done: false })
+                          : logSet(item, setIdx)}
+                        style={{ width: 45, height: 45, borderRadius: 999,
+                          border: 'none', cursor: 'pointer',
+                          background: on ? C.g : C.card2,
+                          display: 'grid', placeItems: 'center',
+                          animation: on
+                            ? 'pop .26s cubic-bezier(.2,.8,.3,1)' : 'none' }}>
+                        <Ico d={I.check} s={17} c={on ? C.bg : C.mute} w={2.6} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* The rest belongs to the pair. */}
+            {!anyLeft && setIdx < maxSets - 1 && pairRest && (
+              <div style={{ marginTop: 13, paddingTop: 11,
+                borderTop: `1px solid ${C.line}`, textAlign: 'center',
+                fontSize: 12.5, fontWeight: 600, color: C.sub }}>
+                Rest {pairRest}s, then set {setIdx + 2}
+              </div>
+            )}
+          </Card>
+        )
+      })}
+
+      {!paired && items.map(item => {
         const mv = item.movements
         const next = Array.from({ length: item.sets })
           .findIndex((_, i) => !cell(item.id, i).done)

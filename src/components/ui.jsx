@@ -227,9 +227,14 @@ export const Mark = ({ s = 30, onPhoto, src, c }) => {
 // Bottom padding clears the tab bar and the testing nudge that sits
 // above it. The nudge disappears once testing is done, so the extra
 // room is briefly unused — better than content hiding behind it.
+// All four sides written out. Mixing `padding` with `paddingTop` means
+// a screen that overrides one of them — Session does, for a cover
+// photo — leaves React reconciling a shorthand against a longhand,
+// which it warns about and sometimes gets wrong.
 export const page = {
   minHeight: '100%', maxWidth: 520, margin: '0 auto',
-  padding: '46px 16px', paddingBottom: FLOAT.clear,
+  paddingTop: 46, paddingLeft: 16, paddingRight: 16,
+  paddingBottom: FLOAT.clear,
 }
 
 

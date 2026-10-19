@@ -57,10 +57,15 @@ export default function Programmes({ userId, profile, onBack, onJoined }) {
               <div style={{ padding: '15px 16px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <div style={{ ...T.h2, fontSize: 19 }}>{p.name}</div>
-                  {on && (
+                  {p.client_id ? (
+                    <span style={{ fontSize: 9.5, fontWeight: 800,
+                      letterSpacing: '.1em', color: C.g }}>
+                      {on ? "YOURS \u00b7 YOU'RE ON THIS" : 'WRITTEN FOR YOU'}
+                    </span>
+                  ) : on ? (
                     <span style={{ fontSize: 9.5, fontWeight: 800,
                       letterSpacing: '.1em', color: C.g }}>YOU'RE ON THIS</span>
-                  )}
+                  ) : null}
                 </div>
 
                 {p.blurb && (
@@ -97,10 +102,14 @@ export default function Programmes({ userId, profile, onBack, onJoined }) {
         <Sheet onClose={() => setAsk(null)}>
           <div style={{ ...T.h2 }}>Switch to {ask.name}?</div>
           <p style={{ ...T.body, marginTop: 10, lineHeight: 1.6 }}>
-            You'll start at week one. Everything you've logged stays where
-            it is — your tests, your races and your numbers all carry over.
-            It's the weeks that reset, because week five of one block isn't
-            week five of another.
+            {rows.some(p => p.id === mine && p.client_id)
+              ? 'This leaves the programme your coach wrote for you. It stays ' +
+                'where it is and you can come back to it any time \u2014 it\u2019ll be ' +
+                'at the top of this list.'
+              : 'You\u2019ll start at week one. Everything you\u2019ve logged stays where ' +
+                'it is \u2014 your tests, your races and your numbers all carry over. ' +
+                'It\u2019s the weeks that reset, because week five of one block isn\u2019t ' +
+                'week five of another.'}
           </p>
           <Btn style={{ marginTop: 22 }} disabled={busy}
             onClick={async () => {

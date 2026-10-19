@@ -67,9 +67,13 @@ export async function saveBenchmark(userId, key, { num, secs, week = 1 }) {
 export async function getMyProgramme() {
   const { data } = await supabase.from('my_programme').select('*').maybeSingle()
   if (data) return data
-  const { data: fallback } = await supabase
+  // A member with nothing assigned gets the first club block. Never a
+  // 1:1 — those belong to one person and are set deliberately, so
+  // landing on one by accident would show somebody else's programme.
+  const { data: open } = await supabase
     .from('programmes').select('*').eq('live', true).eq('archived', false)
-    .order('sort').limit(1).maybeSingle()
+    .order('sort').limit(8)
+  const fallback = (open || []).find(p => !p.client_id) || null
   return fallback
     ? { programme_id: fallback.id, slug: fallback.slug, name: fallback.name,
         total_weeks: fallback.weeks, race_name: fallback.race_name,
@@ -186,10 +190,21 @@ export async function getSessionDetail(sessionId) {
   }))
 }
 
+// What this member may see: every club block, plus their own 1:1 if
+// they have one, which the view puts first. Somebody else's 1:1 isn't
+// filtered out here — it never arrives.
 export async function getProgrammes() {
-  const { data } = await supabase.from('programmes')
+  const { data, error } = await supabase
+    .from('visible_programmes').select('*')
+  if (!error) return data || []
+
+  // The view not existing means 54_one_to_one.sql hasn't run. Falling
+  // back to the plain table keeps the picker working; there are no
+  // private programmes to leak yet in that case, because there's no
+  // column to put them in.
+  const { data: plain } = await supabase.from('programmes')
     .select('*').eq('archived', false).order('sort')
-  return data || []
+  return plain || []
 }
 
 /* ---------------- workout logging ---------------- */

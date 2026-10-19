@@ -125,11 +125,21 @@ export default function Weeks({ programmeId, programmes, onOpenWeek }) {
               <Small onClick={() => onOpenWeek(w)}>Open sessions</Small>
               <Small onClick={() => run(() =>
                 api.duplicateWeek(w.id, programmeId))}>Duplicate</Small>
-              <Small onClick={() => run(async () => {
-                for (const p of (programmes || [])) {
-                  if (p.id !== programmeId) return api.duplicateWeek(w.id, p.id)
-                }
-              })} hide={!(programmes?.length > 1)}>Copy to another block</Small>
+              {/* This used to copy to the first other programme in the
+                  list without saying which. Harmless when there were
+                  two club blocks; not harmless now that a member's
+                  private 1:1 is in the same list. */}
+              <Small onClick={() => {
+                const others = (programmes || []).filter(p => p.id !== programmeId)
+                if (!others.length) return
+                const pick = others[Number(window.prompt(
+                  'Copy week ' + w.idx + ' to which block?\n\n'
+                  + others.map((p, i) => `${i + 1}. ${p.name}`
+                      + (p.client_id ? '  (1:1 \u2014 private)' : '')).join('\n')
+                  + '\n\nType a number:')) - 1]
+                if (!pick) return
+                run(() => api.duplicateWeek(w.id, pick.id))
+              }} hide={!(programmes?.length > 1)}>Copy to another block</Small>
               <div style={{ flex: 1 }} />
               <Small tone="quiet" onClick={async () => {
                 const c = await api.weekContents(w.id)

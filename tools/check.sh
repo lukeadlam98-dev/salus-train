@@ -32,10 +32,10 @@ console.log('  ok')
 NODE
 
 echo "· building every screen"
-node - <<'NODE' > /tmp/salus-screens.jsx
+node - <<'NODE' > .screens-entry.jsx
 const fs=require('fs')
 const out=[]
-;['screens','components'].forEach(d=>{
+;['screens','components','admin'].forEach(d=>{
   fs.readdirSync('src/'+d).filter(f=>f.endsWith('.jsx')).sort().forEach(f=>{
     if(!fs.readFileSync('src/'+d+'/'+f,'utf8').includes('export default'))return
     out.push(`export { default as ${f.slice(0,-4).replace(/-/g,'')} } from './src/${d}/${f.slice(0,-4)}'`)
@@ -44,9 +44,8 @@ const out=[]
 out.push("export { default as App } from './src/App'")
 console.log(out.join('\n'))
 NODE
-cp /tmp/salus-screens.jsx ./.screens-entry.jsx
 npx --yes esbuild@0.21.5 .screens-entry.jsx --bundle --format=esm --jsx=automatic \
-  --outfile=/tmp/salus-screens.mjs \
+  --outfile=.screens-bundle.mjs \
   --external:react --external:react-dom --external:react/jsx-runtime \
   --external:@supabase/supabase-js \
   --define:import.meta.env='{"VITE_SUPABASE_URL":"https://x.supabase.co","VITE_SUPABASE_ANON_KEY":"x"}' \
@@ -55,4 +54,14 @@ rm -f .screens-entry.jsx
 echo "  ok"
 
 echo "· rendering every screen"
-node tools/render-check.mjs /tmp/salus-screens.mjs
+node tools/render-check.mjs "$PWD/.screens-bundle.mjs"
+rm -f .screens-bundle.mjs
+
+echo "· supersets render paired"
+# Needs jsdom and esbuild as devDependencies; skipped rather than failed
+# if they aren't installed, so the check suite still runs on a clean box.
+if node -e "require.resolve('jsdom');require.resolve('esbuild')" 2>/dev/null; then
+  node tools/superset-check.mjs
+else
+  echo "  skipped — npm i -D jsdom esbuild"
+fi

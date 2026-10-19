@@ -7508,3 +7508,815 @@ as $$
     returning 1)
   select count(*)::integer from gone;
 $$;
+
+
+-- ============================================================
+--  54_one_to_one.sql
+-- ============================================================
+
+-- ============================================================
+--  SALUS TRAIN — 1:1 clients
+--
+--  A private programme written for one person. Rakhee's three
+--  days a week are not a block the club runs; they are hers, and
+--  nobody else should see them in the picker, on a leaderboard,
+--  or in the member count of anything.
+--
+--  Privacy by construction rather than by a flag somebody has to
+--  remember to set: a programme with a client_id is private, and
+--  every query that lists programmes already has to decide what
+--  to do with it.
+--
+--  Run after 53_push.sql. Safe to re-run.
+-- ============================================================
+
+alter table public.programmes
+  add column if not exists client_id uuid references auth.users on delete set null;
+
+create index if not exists programmes_client on public.programmes (client_id)
+  where client_id is not null;
+
+-- ---------- what a member is allowed to see ----------
+--  The club's blocks, plus their own 1:1 if they have one. Somebody
+--  else's 1:1 is invisible, which is the whole point.
+drop view if exists public.visible_programmes cascade;
+
+create view public.visible_programmes
+with (security_invoker = on) as
+select pr.*
+  from public.programmes pr
+ where pr.archived = false
+   and (pr.client_id is null or pr.client_id = auth.uid())
+ order by
+   -- A member's own 1:1 sits first. It's the thing they're actually
+   -- doing; the club blocks are the alternatives.
+   (pr.client_id = auth.uid()) desc nulls last,
+   pr.sort;
+
+grant select on public.visible_programmes to authenticated;
+
+-- ---------- a 1:1 is never on a board ----------
+--  The Salus Test ranks members against each other on the same
+--  tests, which still applies. The WOD does not: a session written
+--  for one person has no field to place in.
+drop view if exists public.wotw_board cascade;
+
+create view public.wotw_board
+with (security_invoker = on) as
+with the_one as (
+  select s.id, s.title, coalesce(s.wotw_metric, 'time') as metric, s.est_min
+    from public.sessions s
+    join public.weeks w       on w.id = s.week_id
+    join public.programmes pr on pr.id = w.programme_id
+   where s.wotw and pr.client_id is null
+   limit 1
+),
+entries as (
+  select
+    l.user_id,
+    p.name,
+    max(l.elapsed_s)                                      as seconds,
+    max(coalesce((select sum(sl.reps) from public.set_logs sl
+                   where sl.workout_log_id = l.id and sl.done), 0))
+                                                          as reps,
+    max(coalesce((select max(sl.kg) from public.set_logs sl
+                   where sl.workout_log_id = l.id and sl.done), 0))
+                                                          as kg,
+    max(l.ended_at)                                       as done_at
+  from public.workout_logs l
+  join the_one t         on t.id = l.session_id
+  join public.profiles p on p.id = l.user_id
+  where l.ended_at is not null
+    and p.share_on_leaderboard = true
+    and p.name is not null
+  group by l.user_id, p.name
+)
+select
+  t.id            as session_id,
+  t.title         as session_title,
+  t.metric,
+  e.user_id,
+  e.name,
+  e.seconds,
+  e.reps,
+  e.kg,
+  e.done_at,
+  (e.user_id = auth.uid())                                as mine,
+  rank() over (
+    order by case t.metric
+      when 'rounds' then -e.reps
+      when 'weight' then -e.kg
+      else               e.seconds::numeric
+    end
+  )                                                       as place
+from entries e
+cross join the_one t
+order by place;
+
+grant select on public.wotw_board to authenticated;
+
+-- ---------- create one ----------
+--  Takes the member, makes the programme, builds the weeks, and puts
+--  them on it. Four steps that have to happen together — a client
+--  programme nobody is attached to is a programme that will be found
+--  six months later and nobody will know whose it was.
+drop function if exists public.create_client_programme(uuid, text, integer) cascade;
+
+create function public.create_client_programme(
+  p_client uuid,
+  p_name   text default null,
+  p_weeks  integer default 4
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id   uuid;
+  v_name text;
+  v_slug text;
+  i      integer;
+begin
+  -- auth.uid() is null when this is called from the SQL editor or with
+  -- the service role — direct database access, which is strictly more
+  -- privileged than an admin, not less. Gating on is_admin() alone
+  -- meant the seed script couldn't create the programme it needed.
+  if auth.uid() is not null and not public.is_admin() then
+    raise exception 'not permitted';
+  end if;
+
+  select coalesce(p_name, p.name || ' — 1:1') into v_name
+    from public.profiles p where p.id = p_client;
+
+  if v_name is null then
+    raise exception 'no such member';
+  end if;
+
+  -- A slug nobody has to think about, unique even if the same member
+  -- gets a second programme later.
+  v_slug := 'c-' || replace(p_client::text, '-', '') || '-'
+            || to_char(now(), 'YYYYMMDDHH24MISS');
+
+  insert into public.programmes
+    (slug, name, weeks, blurb, live, archived, client_id, sort)
+  values
+    (v_slug, v_name, p_weeks,
+     'Written for you. Nobody else can see this.',
+     true, false, p_client,
+     coalesce((select max(sort) from public.programmes), 0) + 1)
+  returning id into v_id;
+
+  for i in 1..p_weeks loop
+    insert into public.weeks (programme_id, idx, phase, published)
+    values (v_id, i, 'Week ' || i, true);
+  end loop;
+
+  -- Straight onto it. A 1:1 client isn't choosing between blocks.
+  update public.profiles
+     set programme_id = v_id, week_idx = 1, week_started = current_date
+   where id = p_client;
+
+  return v_id;
+end;
+$$;
+
+grant execute on function public.create_client_programme(uuid, text, integer)
+  to authenticated;
+
+-- ---------- who's on one ----------
+drop view if exists public.client_programmes cascade;
+
+create view public.client_programmes
+with (security_invoker = on) as
+select
+  pr.id,
+  pr.name,
+  pr.weeks,
+  pr.archived,
+  pr.client_id,
+  p.name                                   as client_name,
+  p.photo_url                              as client_photo,
+  coalesce(p.week_idx, 1)                  as week_idx,
+
+  (select count(*) from public.sessions s
+    join public.weeks w on w.id = s.week_id
+   where w.programme_id = pr.id and s.kind <> 'rest')     as sessions,
+
+  (select count(distinct l.session_id)
+     from public.workout_logs l
+     join public.sessions s on s.id = l.session_id
+     join public.weeks w    on w.id = s.week_id
+    where w.programme_id = pr.id
+      and l.user_id = pr.client_id
+      and l.ended_at is not null)                         as done,
+
+  (select max(l.ended_at) from public.workout_logs l
+    where l.user_id = pr.client_id and l.ended_at is not null)
+                                                          as last_trained
+from public.programmes pr
+join public.profiles p on p.id = pr.client_id
+where pr.client_id is not null
+  and public.is_admin()
+order by p.name;
+
+grant select on public.client_programmes to authenticated;
+
+
+-- ============================================================
+--  55_rakhee.sql
+-- ============================================================
+
+-- ============================================================
+--  SALUS TRAIN — Rakhee's week one
+--
+--  Three days, written A1/A2 rather than as a list. A superset is
+--  one block with two or three movements in it, and the app pairs
+--  the sets: A1 set one, A2 set one, A1 set two. Listing them as
+--  separate blocks would be "finish all of A1 first", which is a
+--  different session.
+--
+--  The D piece on each day is a conditioning finisher and runs
+--  through the guided screen rather than the set grid — 20 seconds
+--  on and 40 off is a clock, not something to log a weight against.
+--
+--  Idempotent: re-running updates the content rather than adding a
+--  second copy.
+--
+--  Run after 54_one_to_one.sql.
+-- ============================================================
+
+-- ---------- the movements this needs ----------
+insert into public.movements (name, default_rest_s, has_time) values
+  ('Leg Press', 90, false),
+  ('Lat Pulldown', 90, false),
+  ('DB Incline Press', 90, false),
+  ('Seated Cable Row', 90, false),
+  ('Face Pull', 90, false),
+  ('Hip Thrust', 90, false),
+  ('DB Split Squat', 90, false),
+  ('BikeErg', 60, true),
+  ('Goblet Squat', 90, false),
+  ('Machine Chest Press', 90, false),
+  ('Seated DB Shoulder Press', 90, false),
+  ('Lat Pulldown Neutral', 90, false),
+  ('Leg Extension', 90, false),
+  ('Leg Curl', 90, false),
+  ('SkiErg', 60, true),
+  ('Hack Squat', 90, false),
+  ('DB Romanian Deadlift', 90, false),
+  ('Incline Press Up', 90, false),
+  ('Seated Machine Row', 90, false),
+  ('DB Curl', 90, false),
+  ('Rope Pushdown', 90, false),
+  ('Treadmill Sled Push', 60, true)
+on conflict (name) do nothing;
+
+do $$
+declare
+  v_client uuid;
+  v_prog   uuid;
+  v_week   uuid;
+  v_sess   uuid;
+  v_block  uuid;
+  r        record;
+begin
+  -- Rakhee, by name. If she isn't a member yet this does nothing
+  -- rather than creating a programme attached to nobody.
+  select id into v_client from public.profiles
+   where lower(name) like 'rakhee%' limit 1;
+
+  if v_client is null then
+    raise notice 'No member matching Rakhee — skipping. Add her, then re-run.';
+    return;
+  end if;
+
+  select id into v_prog from public.programmes
+   where client_id = v_client order by sort limit 1;
+
+  if v_prog is null then
+    v_prog := public.create_client_programme(v_client, 'Full Body', 4);
+  else
+    update public.programmes set name = 'Full Body'
+     where id = v_prog and name like '%1:1%';
+  end if;
+
+  select id into v_week from public.weeks
+   where programme_id = v_prog and idx = 1;
+
+  -- ---------- the three days ----------
+  for r in
+    select * from (values
+      (1, 'Full Body A', 'Legs & back'),
+      (3, 'Full Body B', 'Squat & press'),
+      (5, 'Full Body C', 'Legs & hinge')
+    ) as t(day, title, focus)
+  loop
+    select id into v_sess from public.sessions
+     where week_id = v_week and day = r.day and coalesce(slot, 1) = 1;
+
+    if v_sess is null then
+      insert into public.sessions
+        (week_id, day, slot, title, kind, est_min, focus, body)
+      values
+        (v_week, r.day, 1, r.title, 'strength', 55, r.focus,
+         'Supersets. Work through A1 and A2 together — one set of each, '
+         || 'then rest, then go again.')
+      returning id into v_sess;
+    else
+      update public.sessions
+         set title = r.title, kind = 'strength', focus = r.focus, est_min = 55
+       where id = v_sess;
+    end if;
+
+    -- wipe and rewrite the blocks, so a re-run is an update
+    delete from public.blocks where session_id = v_sess;
+  end loop;
+
+  -- ---------- blocks ----------
+  for r in
+    select * from (values
+  (1, 1, 'A', 'A', 'superset',  3, 90, null),
+  (1, 2, 'B', 'B', 'superset',  3, 90, null),
+  (1, 3, 'C', 'C', 'superset',  3, 90, null),
+  (1, 4, 'D', 'Finisher', 'intervals', 5, 40, 20),   -- bike 20s on / 40s off
+  (3, 1, 'A', 'A', 'superset',  3, 90, null),
+  (3, 2, 'B', 'B', 'superset',  3, 90, null),
+  (3, 3, 'C', 'C', 'superset',  3, 75, null),
+  (3, 4, 'D', 'Finisher', 'intervals', 4, 60, 30),   -- ski 30s on / 60s off
+  (5, 1, 'A', 'A', 'superset',  3, 90, null),
+  (5, 2, 'B', 'B', 'superset',  3, 90, null),
+  (5, 3, 'C', 'C', 'superset',  2, 60, null),
+  (5, 4, 'D', 'Finisher', 'intervals', 4, 60, 20)    -- sled 20s on / 60s off
+    ) as t(day, ord, letter, label, fmt, rounds, rest_s, work_s)
+  loop
+    select s.id into v_sess from public.sessions s
+     where s.week_id = v_week and s.day = r.day and coalesce(s.slot,1) = 1;
+
+    insert into public.blocks
+      (session_id, ord, letter, label, format, rounds, rest_s, work_s, scheme)
+    values
+      (v_sess, r.ord, r.letter, r.label, r.fmt, r.rounds, r.rest_s,
+       r.work_s, null);
+  end loop;
+
+  -- the chip, from the structured fields
+  update public.blocks b set scheme = public.block_scheme(b)
+    from public.sessions s
+    join public.weeks w on w.id = s.week_id
+   where b.session_id = s.id and w.programme_id = v_prog;
+
+  -- ---------- the lines members read ----------
+  for r in
+    select * from (values
+  (1, 'A', 1, 'A1', '3 × 12', 'Leg Press'),
+  (1, 'A', 2, 'A2', '3 × 12', 'Lat Pulldown'),
+  (1, 'B', 1, 'B1', '3 × 10', 'DB Incline Press'),
+  (1, 'B', 2, 'B2', '3 × 12', 'Seated Cable Row'),
+  (1, 'B', 3, 'B3', '3 × 12', 'Face Pull'),
+  (1, 'C', 1, 'C1', '3 × 12', 'Hip Thrust'),
+  (1, 'C', 2, 'C2', '2 × 8 each leg', 'DB Split Squat'),
+  (1, 'D', 1, 'D1', '5 × 20s hard / 40s easy', 'BikeErg'),
+  (3, 'A', 1, 'A1', '3 × 10', 'Goblet Squat'),
+  (3, 'A', 2, 'A2', '3 × 12', 'Machine Chest Press'),
+  (3, 'B', 1, 'B1', '3 × 10', 'Seated DB Shoulder Press'),
+  (3, 'B', 2, 'B2', '3 × 12', 'Lat Pulldown Neutral'),
+  (3, 'C', 1, 'C1', '3 × 12', 'Leg Extension'),
+  (3, 'C', 2, 'C2', '3 × 12', 'Leg Curl'),
+  (3, 'D', 1, 'D1', '4 × 30s hard / 60s easy', 'SkiErg'),
+  (5, 'A', 1, 'A1', '3 × 10', 'Hack Squat'),
+  (5, 'A', 2, 'A2', '3 × 10', 'DB Romanian Deadlift'),
+  (5, 'B', 1, 'B1', '3 × 8–10', 'Incline Press Up'),
+  (5, 'B', 2, 'B2', '3 × 12', 'Seated Machine Row'),
+  (5, 'C', 1, 'C1', '2 × 12', 'DB Curl'),
+  (5, 'C', 2, 'C2', '2 × 12', 'Rope Pushdown'),
+  (5, 'D', 1, 'D1', '4 × 20s push / 60s walk', 'Treadmill Sled Push')
+    ) as t(day, letter, ord, tag, pres, movement)
+  loop
+    select b.id into v_block
+      from public.blocks b
+      join public.sessions s on s.id = b.session_id
+     where s.week_id = v_week and s.day = r.day
+       and coalesce(s.slot,1) = 1 and b.letter = r.letter;
+
+    insert into public.block_lines (block_id, ord, prescription, movement, sub)
+    values (v_block, r.ord, r.pres, r.movement, r.tag);
+  end loop;
+
+  -- ---------- the items she logs against ----------
+  for r in
+    select * from (values
+  (1, 'A', 1, 'Leg Press', 3, 12, 90),
+  (1, 'A', 2, 'Lat Pulldown', 3, 12, 90),
+  (1, 'B', 1, 'DB Incline Press', 3, 10, 90),
+  (1, 'B', 2, 'Seated Cable Row', 3, 12, 90),
+  (1, 'B', 3, 'Face Pull', 3, 12, 90),
+  (1, 'C', 1, 'Hip Thrust', 3, 12, 90),
+  (1, 'C', 2, 'DB Split Squat', 2, 8, 90),
+  (1, 'D', 1, 'BikeErg', 5, null, 40),
+  (3, 'A', 1, 'Goblet Squat', 3, 10, 90),
+  (3, 'A', 2, 'Machine Chest Press', 3, 12, 90),
+  (3, 'B', 1, 'Seated DB Shoulder Press', 3, 10, 90),
+  (3, 'B', 2, 'Lat Pulldown Neutral', 3, 12, 90),
+  (3, 'C', 1, 'Leg Extension', 3, 12, 75),
+  (3, 'C', 2, 'Leg Curl', 3, 12, 75),
+  (3, 'D', 1, 'SkiErg', 4, null, 60),
+  (5, 'A', 1, 'Hack Squat', 3, 10, 90),
+  (5, 'A', 2, 'DB Romanian Deadlift', 3, 10, 90),
+  (5, 'B', 1, 'Incline Press Up', 3, 9, 90),
+  (5, 'B', 2, 'Seated Machine Row', 3, 12, 90),
+  (5, 'C', 1, 'DB Curl', 2, 12, 60),
+  (5, 'C', 2, 'Rope Pushdown', 2, 12, 60),
+  (5, 'D', 1, 'Treadmill Sled Push', 4, null, 60)
+    ) as t(day, letter, ord, movement, sets, reps, rest_s)
+  loop
+    select b.id into v_block
+      from public.blocks b
+      join public.sessions s on s.id = b.session_id
+     where s.week_id = v_week and s.day = r.day
+       and coalesce(s.slot,1) = 1 and b.letter = r.letter;
+
+    insert into public.block_items (block_id, movement_id, ord, sets, reps, rest_s)
+    select v_block, m.id, r.ord, r.sets, r.reps, r.rest_s
+      from public.movements m where m.name = r.movement;
+  end loop;
+
+  -- ---------- the rest of the week ----------
+  insert into public.sessions (week_id, day, slot, title, kind, est_min, body)
+  select v_week, d, 1, 'Rest', 'rest', 0,
+         'Walk if you fancy it. Nothing that needs a warm-up.'
+    from unnest(array[2,4,6,7]) as d
+   where not exists (select 1 from public.sessions s
+                      where s.week_id = v_week and s.day = d);
+
+  raise notice 'Rakhee week 1 written: 3 sessions, 12 blocks';
+end $$;
+
+
+-- ============================================================
+--  56_copy_everything.sql
+-- ============================================================
+
+-- ============================================================
+--  SALUS TRAIN — make "copy week" copy the whole week
+--
+--  duplicate_week_to was written before blocks had formats, and it
+--  named its columns one by one:
+--
+--    insert into blocks (session_id, ord, letter, label, scheme, rest_note)
+--
+--  Every column added since has been quietly dropped on every copy —
+--  format, rounds, work_s, rest_s, cap_s, window_s, ladder,
+--  target_pct, target_rpe, pace_pct on a block, and slot, focus,
+--  video_url, coach_id and the whole run plan on a session. So
+--  "+ Copy 3" gave you a week where every AMRAP had become straight
+--  sets, every interval had lost its clock, every superset had come
+--  apart into a list, and two sessions on the same day had collided
+--  on slot.
+--
+--  It compiled, it ran, it returned a week. You had to open a session
+--  and know what used to be there to see what was missing.
+--
+--  The fix isn't a longer column list — that's the same bug waiting
+--  for the next migration. It reads the columns from the catalogue, so
+--  anything added later is carried without this function being
+--  touched again.
+--
+--  Run after 55_rakhee.sql. Safe to re-run.
+-- ============================================================
+
+set lock_timeout = '5s';
+
+-- ---------- which columns to carry ----------
+--  Everything except the row's own identity, its link to its parent,
+--  and the few things that must not be duplicated.
+drop function if exists public.copyable_columns(text, text[]) cascade;
+
+create function public.copyable_columns(p_table text, p_skip text[])
+returns text
+language sql
+stable
+set search_path = ''
+as $$
+  select string_agg(quote_ident(column_name), ', ' order by ordinal_position)
+    from information_schema.columns
+   where table_schema = 'public'
+     and table_name = p_table
+     and column_name <> all (p_skip);
+$$;
+
+-- ---------- copy a week ----------
+drop function if exists public.duplicate_week_to(uuid, uuid, integer) cascade;
+
+create function public.duplicate_week_to(
+  src_week    uuid,
+  dest_prog   uuid,
+  dest_idx    integer default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_dest   uuid;
+  v_idx    integer;
+  v_sess   record;
+  v_new_s  uuid;
+  v_block  record;
+  v_new_b  uuid;
+  c_sess   text;
+  c_block  text;
+  c_line   text;
+  c_note   text;
+  c_item   text;
+begin
+  -- Null uid means the SQL editor or the service role, which is more
+  -- privileged than an admin rather than less.
+  if auth.uid() is not null and not public.is_admin() then
+    raise exception 'not permitted';
+  end if;
+
+  v_idx := coalesce(dest_idx,
+    coalesce((select max(idx) from public.weeks
+               where programme_id = dest_prog), 0) + 1);
+
+  if exists (select 1 from public.weeks
+              where programme_id = dest_prog and idx = v_idx) then
+    raise exception 'week % already exists there', v_idx;
+  end if;
+
+  --  wotw is deliberately not carried: two sessions flagged as the
+  --  workout of the week means the board picks one of them at random.
+  c_sess  := public.copyable_columns('sessions',
+               array['id','week_id','created_at','wotw','wotw_metric']);
+  c_block := public.copyable_columns('blocks',
+               array['id','session_id','created_at']);
+  c_line  := public.copyable_columns('block_lines',
+               array['id','block_id','created_at']);
+  c_note  := public.copyable_columns('coach_notes',
+               array['id','block_id','created_at']);
+  c_item  := public.copyable_columns('block_items',
+               array['id','block_id','created_at']);
+
+  insert into public.weeks (programme_id, idx, phase, note, published)
+  select dest_prog, v_idx, phase, note, false
+    from public.weeks where id = src_week
+  returning id into v_dest;
+
+  for v_sess in
+    select id from public.sessions where week_id = src_week
+     order by day, slot
+  loop
+    execute format(
+      'insert into public.sessions (week_id, %s)
+       select $1, %s from public.sessions where id = $2
+       returning id', c_sess, c_sess)
+      using v_dest, v_sess.id into v_new_s;
+
+    for v_block in
+      select id from public.blocks where session_id = v_sess.id order by ord
+    loop
+      execute format(
+        'insert into public.blocks (session_id, %s)
+         select $1, %s from public.blocks where id = $2
+         returning id', c_block, c_block)
+        using v_new_s, v_block.id into v_new_b;
+
+      execute format(
+        'insert into public.block_lines (block_id, %s)
+         select $1, %s from public.block_lines where block_id = $2',
+        c_line, c_line) using v_new_b, v_block.id;
+
+      execute format(
+        'insert into public.coach_notes (block_id, %s)
+         select $1, %s from public.coach_notes where block_id = $2',
+        c_note, c_note) using v_new_b, v_block.id;
+
+      execute format(
+        'insert into public.block_items (block_id, %s)
+         select $1, %s from public.block_items where block_id = $2',
+        c_item, c_item) using v_new_b, v_block.id;
+    end loop;
+  end loop;
+
+  return v_dest;
+end;
+$$;
+
+grant execute on function public.duplicate_week_to(uuid, uuid, integer)
+  to authenticated;
+
+-- ---------- copy somebody's 1:1 week onto somebody else ----------
+--  For trying a programme out on yourself before the client sees it,
+--  which is the only honest way to know whether it reads right on a
+--  phone in a gym.
+drop function if exists public.copy_client_week(uuid, uuid, integer) cascade;
+
+create function public.copy_client_week(
+  p_from  uuid,     -- the member whose 1:1 to copy from
+  p_to    uuid,     -- the member to give a copy to
+  p_idx   integer default 1
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_src_prog  uuid;
+  v_src_week  uuid;
+  v_dest_prog uuid;
+  v_dest_week uuid;
+  v_was       uuid;
+  v_was_idx   integer;
+begin
+  if auth.uid() is not null and not public.is_admin() then
+    raise exception 'not permitted';
+  end if;
+
+  select id into v_src_prog from public.programmes
+   where client_id = p_from and archived = false order by sort limit 1;
+  if v_src_prog is null then
+    raise exception 'that member has no 1:1 programme to copy';
+  end if;
+
+  select id into v_src_week from public.weeks
+   where programme_id = v_src_prog and idx = p_idx;
+  if v_src_week is null then
+    raise exception 'week % is not written yet', p_idx;
+  end if;
+
+  -- Where they were, so it can be said out loud. Switching programme
+  -- resets the week, and finding that out afterwards is no good.
+  select programme_id, week_idx into v_was, v_was_idx
+    from public.profiles where id = p_to;
+
+  select id into v_dest_prog from public.programmes
+   where client_id = p_to and archived = false order by sort limit 1;
+  if v_dest_prog is null then
+    v_dest_prog := public.create_client_programme(
+                     p_to, (select name from public.programmes
+                             where id = v_src_prog), 4);
+  end if;
+
+  -- create_client_programme builds empty weeks. Clear the one we're
+  -- about to write so the copy can take its number rather than
+  -- landing after it.
+  delete from public.weeks
+   where programme_id = v_dest_prog and idx = p_idx
+     and not exists (select 1 from public.sessions s
+                      where s.week_id = weeks.id);
+
+  if exists (select 1 from public.weeks
+              where programme_id = v_dest_prog and idx = p_idx) then
+    raise exception
+      'week % already has sessions in it — delete it first if you mean to replace it',
+      p_idx;
+  end if;
+
+  v_dest_week := public.duplicate_week_to(v_src_week, v_dest_prog, p_idx);
+
+  update public.weeks set published = true where id = v_dest_week;
+  update public.profiles
+     set programme_id = v_dest_prog, week_idx = p_idx,
+         week_started = current_date
+   where id = p_to;
+
+  if v_was is distinct from v_dest_prog then
+    raise notice '%', format(
+      'Moved off programme %s (week %s). To go back: '
+      || 'update profiles set programme_id = %L, week_idx = %s where id = %L;',
+      v_was, v_was_idx, v_was, v_was_idx, p_to);
+  end if;
+
+  return v_dest_week;
+end;
+$$;
+
+grant execute on function public.copy_client_week(uuid, uuid, integer)
+  to authenticated;
+
+-- ---------- give Luke a copy of Rakhee's week one ----------
+do $$
+declare
+  v_luke   uuid;
+  v_rakhee uuid;
+begin
+  select id into v_luke from public.profiles
+   where lower(name) like 'luke%adlam%' limit 1;
+  if v_luke is null then
+    select id into v_luke from public.profiles
+     where lower(name) like 'luke%' limit 1;
+  end if;
+
+  select id into v_rakhee from public.profiles
+   where lower(name) like 'rakhee%' limit 1;
+
+  if v_luke is null then
+    raise notice 'No member matching Luke — skipping.';
+    return;
+  end if;
+  if v_rakhee is null then
+    raise notice 'No member matching Rakhee — run 55_rakhee.sql first.';
+    return;
+  end if;
+
+  begin
+    perform public.copy_client_week(v_rakhee, v_luke, 1);
+    raise notice 'Luke now has his own copy of week one.';
+  exception when others then
+    -- Most likely he already has it, which is not a failure worth
+    -- stopping a paste for.
+    raise notice 'Not copied: %', sqlerrm;
+  end;
+end $$;
+
+
+-- ============================================================
+--  57_name_the_programme.sql
+-- ============================================================
+
+-- ============================================================
+--  SALUS TRAIN — name a 1:1 after the training, not the client
+--
+--  create_client_programme defaulted to "<name> — 1:1". In the back
+--  office the roster already says whose it is on the same row, so the
+--  programme name was saying it twice. And in the member's app it's
+--  the only name she sees on Train — "Rakhee Patel — 1:1" tells her
+--  nothing about what she's about to do. "Full Body" does.
+--
+--  So: the default becomes the coach's to choose, and anything
+--  already created under the old default is renamed.
+--
+--  Run after 56_copy_everything.sql. Safe to re-run.
+-- ============================================================
+
+set lock_timeout = '5s';
+
+drop function if exists public.create_client_programme(uuid, text, integer) cascade;
+
+create function public.create_client_programme(
+  p_client uuid,
+  p_name   text default null,
+  p_weeks  integer default 4
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id   uuid;
+  v_name text;
+  v_slug text;
+  i      integer;
+begin
+  -- A null uid is the SQL editor or the service role: direct database
+  -- access, which is more privileged than an admin rather than less.
+  if auth.uid() is not null and not public.is_admin() then
+    raise exception 'not permitted';
+  end if;
+
+  if not exists (select 1 from public.profiles where id = p_client) then
+    raise exception 'no such member';
+  end if;
+
+  --  Named after what it is. Falls back to "Full Body" rather than the
+  --  member's name, because a programme name is read by the member on
+  --  her own Train screen, where her own name is not information.
+  v_name := coalesce(nullif(btrim(p_name), ''), 'Full Body');
+
+  v_slug := 'c-' || replace(p_client::text, '-', '') || '-'
+            || to_char(now(), 'YYYYMMDDHH24MISS');
+
+  insert into public.programmes
+    (slug, name, weeks, blurb, live, archived, client_id, sort)
+  values
+    (v_slug, v_name, p_weeks,
+     'Written for you. Nobody else can see this.',
+     true, false, p_client,
+     coalesce((select max(sort) from public.programmes), 0) + 1)
+  returning id into v_id;
+
+  for i in 1..p_weeks loop
+    insert into public.weeks (programme_id, idx, phase, published)
+    values (v_id, i, 'Week ' || i, true);
+  end loop;
+
+  update public.profiles
+     set programme_id = v_id, week_idx = 1, week_started = current_date
+   where id = p_client;
+
+  return v_id;
+end;
+$$;
+
+grant execute on function public.create_client_programme(uuid, text, integer)
+  to authenticated;
+
+-- ---------- rename what the old default already made ----------
+update public.programmes
+   set name = 'Full Body'
+ where client_id is not null
+   and name like '%1:1%';
