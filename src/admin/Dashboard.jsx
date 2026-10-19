@@ -39,7 +39,17 @@ export default function Dashboard({ programme, onGo }) {
     : null
   const active = people.filter(m => m.last_trained &&
     (Date.now() - new Date(m.last_trained)) < 7 * 86400000).length
-  const days = daysUntil(people.map(m => m.race_date).filter(Boolean).sort()[0])
+  // The soonest race among the people on THIS programme, and only
+  // when this programme is about a race. It used to scan every member
+  // in the club, so a strength block showed a countdown belonging to
+  // somebody doing HYROX — a date with no relationship to the page it
+  // was printed on.
+  const racing = !!(programme?.race_name || programme?.race_date
+                    || programme?.uses_half)
+  const onThis = people.filter(m => m.programme_id === programme?.id)
+  const days = racing
+    ? daysUntil(onThis.map(m => m.race_date).filter(Boolean).sort()[0])
+    : null
 
   // ---- stations, worst first ----
   const stationRows = (() => {
@@ -96,7 +106,7 @@ export default function Dashboard({ programme, onGo }) {
               : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}
           </h1>
         </div>
-        {days != null && (
+        {days != null ? (
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 30, fontWeight: 900, letterSpacing: '-.045em',
               fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{days}</div>
@@ -104,7 +114,18 @@ export default function Dashboard({ programme, onGo }) {
               days to the first race
             </div>
           </div>
-        )}
+        ) : weeks.length ? (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 30, fontWeight: 900, letterSpacing: '-.045em',
+              fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+              {weeks.filter(w => w.published).length}
+              <span style={{ color: C.mute }}>/{weeks.length}</span>
+            </div>
+            <div style={{ fontSize: 11.5, color: C.sub, marginTop: 3 }}>
+              weeks published
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* ---- three numbers, not five ---- */}

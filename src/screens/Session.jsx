@@ -72,6 +72,10 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
 
   useEffect(() => { getSessionDetail(session.id).then(setBlocks) }, [session.id])
 
+  useEffect(() => {
+    if (live) window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [live])
+
   // What they lifted last time, for every movement in this session.
   useEffect(() => {
     if (!blocks || !userId) return
@@ -134,7 +138,7 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
     }
   }
 
-  async function logSet(item, i) {
+  async function logSet(item, i, restAfter) {
     const c = cell(item.id, i)
     const reps = c.reps ?? ghost(item, i, 'reps')
     const kg   = c.kg   ?? ghost(item, i, 'kg')
@@ -153,7 +157,7 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
       }
       return next
     })
-    setRest(item.rest_s || 90)
+    if (restAfter !== null) setRest(restAfter ?? item.rest_s ?? 90)
   }
 
   async function end() {
@@ -333,6 +337,7 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
         items.some(it => s < it.sets && !cell(it.id, s).done))
     : -1
   const pairRest = B.rest_s || items[0]?.rest_s || null
+  const restDefault = pairRest || 90
 
   if (guided) return (
     <Guided plan={guided} title={B.label}
@@ -464,9 +469,13 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
                     </div>
                   </div>
 
-                  <div onClick={() => on
-                      ? writeSet(item, setIdx, { done: false })
-                      : logSet(item, setIdx)}
+                  <div onClick={() => {
+                      if (on) return writeSet(item, setIdx, { done: false })
+                      const rest = items.every(it =>
+                        it.id === item.id || setIdx >= it.sets
+                        || cell(it.id, setIdx).done) ? pairRest : null
+                      logSet(item, setIdx, rest)
+                    }}
                     style={{ display: 'flex', alignItems: 'center',
                       cursor: 'pointer' }}>
                     <div style={{ width: 3.5, height: 38, borderRadius: 999,
@@ -486,7 +495,9 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
                           label: 'kg', value: c.kg ?? '' })} />
                       <button onClick={() => on
                           ? writeSet(item, setIdx, { done: false })
-                          : logSet(item, setIdx)}
+                          : logSet(item, setIdx, items.every(it =>
+                              it.id === item.id || setIdx >= it.sets
+                              || cell(it.id, setIdx).done) ? pairRest : null)}
                         style={{ width: 45, height: 45, borderRadius: 999,
                           border: 'none', cursor: 'pointer',
                           background: on ? C.g : C.card2,
@@ -587,7 +598,7 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
         margin: '0 auto', bottom: 'calc(14px + env(safe-area-inset-bottom))',
         background: C.card, border: `1px solid ${C.line}`, borderRadius: 999,
         padding: 8, display: 'flex', alignItems: 'center', gap: 11, zIndex: 40 }}>
-        <button onClick={() => setRest(rest == null ? 150 : null)} style={{
+        <button onClick={() => setRest(rest == null ? restDefault : null)} style={{
           width: 44, height: 44, borderRadius: 999, border: 'none', background: C.g,
           display: 'grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0,
         }}>
@@ -599,7 +610,7 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
         <div style={{ fontSize: 14, fontWeight: 700, color: C.sub }}>Rest</div>
         <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.03em',
           paddingRight: 13, ...T.num, color: rest != null ? C.g : C.ink }}>
-          {rest != null ? fmt(rest) : '2:30'}
+          {rest != null ? fmt(rest) : fmt(restDefault)}
         </div>
       </div>
 
