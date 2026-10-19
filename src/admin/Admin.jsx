@@ -25,6 +25,7 @@ export default function Admin({ profile, onExit }) {
   const [nav, setNav] = useState({ view: 'club', idx: 1 })
   const [session, setSession] = useState(null)
   const [newProg, setNewProg] = useState(false)
+  const [clients, setClients] = useState([])
   const [err, setErr] = useState(null)
 
   const loadProgrammes = async () => {
@@ -41,7 +42,11 @@ export default function Admin({ profile, onExit }) {
     ? api.listWeeks(prog.id).then(setWeeks).catch(e => setErr(e.message))
     : Promise.resolve()
 
-  useEffect(() => { if (profile?.role === 'admin') loadProgrammes() }, [profile])
+  useEffect(() => {
+    if (profile?.role !== 'admin') return
+    loadProgrammes()
+    api.listClientProgrammes().then(setClients).catch(() => {})
+  }, [profile])
   useEffect(() => { if (prog) { loadWeeks(); setSession(null) } }, [prog?.id])
 
   if (profile?.role !== 'admin') return (
@@ -56,6 +61,7 @@ export default function Admin({ profile, onExit }) {
     </div>
   )
 
+  const clientName = clients.find(c => c.id === prog?.id)?.client_name
   const week = weeks.find(w => w.idx === nav.idx)
   const nextIdx = weeks.length ? Math.max(...weeks.map(w => w.idx)) + 1 : 1
 
@@ -113,16 +119,16 @@ export default function Admin({ profile, onExit }) {
             border: `1px solid ${C.line}`, borderRadius: 8, padding: '9px 10px',
             fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: F,
             marginBottom: 6 }}>
-          {/* Club programmes only. A 1:1 is reached through its client,
-              not by scrolling past it looking for the real ones. */}
-          {programmes.filter(p => !p.client_id).map(p => (
+          {/* One list. Keeping 1:1s out of here was meant to stop the
+              dropdown filling with private programmes, but it just made
+              the one you're writing hard to reach. They're labelled
+              instead, which is what the separation was for. */}
+          {programmes.map(p => (
             <option key={p.id} value={p.id}>
-              {p.name}{p.live ? '' : ' · draft'}
+              {p.name}
+              {p.client_id ? ' · 1:1' : p.live ? '' : ' · draft'}
             </option>
           ))}
-          {prog?.client_id && (
-            <option value={prog.id}>{prog.name}</option>
-          )}
         </select>
         <button onClick={() => setNewProg(true)} style={{ width: '100%',
           background: 'transparent', border: `1px dashed ${C.line}`,
@@ -139,7 +145,7 @@ export default function Admin({ profile, onExit }) {
           <div style={{ background: C.card3, borderRadius: 8,
             padding: '8px 9px', margin: '0 0 10px', fontSize: 11,
             fontWeight: 700, letterSpacing: '-.005em', color: C.ink }}>
-            1:1 · private to one member
+            {clientName ? `1:1 · ${clientName}` : '1:1 · private to one member'}
           </div>
         )}
 
