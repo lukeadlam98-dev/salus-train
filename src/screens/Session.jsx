@@ -176,7 +176,7 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
 
   /* ---------------- preview ---------------- */
   if (!live) return (
-    <div style={{ ...page, paddingTop: session.cover_url ? 0 : 46 }}>
+    <div style={{ ...page, paddingBottom: 'calc(96px + env(safe-area-inset-bottom))', paddingTop: session.cover_url ? 0 : 46 }}>
       {session.cover_url ? (
         <div style={{ margin: '0 -16px 18px' }}>
           <Photo src={session.cover_url} dim={.95} style={{ minHeight: 240 }}>
@@ -321,7 +321,14 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
         </Card>
       ))}
 
-      <Btn style={{ marginTop: 18 }} onClick={begin}>Start workout</Btn>
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0,
+        padding: `12px 16px calc(16px + env(safe-area-inset-bottom))`,
+        background: `linear-gradient(180deg,transparent,${C.bg} 42%)`,
+        zIndex: 40, pointerEvents: 'none' }}>
+        <div style={{ maxWidth: 520, margin: '0 auto', pointerEvents: 'auto' }}>
+          <Btn onClick={begin}>Start workout</Btn>
+        </div>
+      </div>
     </div>
   )
 

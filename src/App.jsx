@@ -18,6 +18,7 @@ import Programmes from './screens/Programmes'
 import Notifications from './screens/Notifications'
 import Community from './screens/Community'
 import Board    from './screens/Board'
+import Soon     from './components/Soon'
 import Coaches  from './screens/Coaches'
 import Progress from './screens/Progress'
 import Races    from './screens/Races'
@@ -376,14 +377,17 @@ export default function App() {
           prediction={prediction} /></Guard>
       </Keep>
 
+      {/* Both screens are built and work — they're waiting on enough
+          members to be worth opening. Swap the Soon back for the real
+          one and nothing else has to change. */}
       <Keep on={tab === 'community'}>
-        <Guard><Community profile={profile} userId={session.user.id}
-          onCoach={() => setCoaches(true)} /></Guard>
+        <Guard><Soon title="The room"
+          body="Where the club turns up \u2014 who trained today, what they lifted, and the noise around it. Opening once there are enough of us in here to make it worth reading." /></Guard>
       </Keep>
 
       <Keep on={tab === 'leaderboard'}>
-        <Guard><Board profile={profile} userId={session.user.id}
-          onShare={() => patch({ share_on_leaderboard: true })} /></Guard>
+        <Guard><Soon title="Leaderboards"
+          body="The Salus Test and the workout of the week, ranked. Waiting on enough tested members for a board to mean anything." /></Guard>
       </Keep>
 
       <Keep on={tab === 'me'}>
