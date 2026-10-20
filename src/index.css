@@ -12,7 +12,10 @@ html, body, #root {
 }
 
 input, button { font-family: inherit; }
-button { -webkit-appearance: none; }
+/* Every button in this app draws its own box. Without this they
+   inherit the browser's default 2px outset border, which appears
+   wherever a style forgets to say border: none — and did. */
+button { -webkit-appearance: none; appearance: none; border: 0; }
 
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; }

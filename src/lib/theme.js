@@ -30,40 +30,47 @@
 // brown-black, the top end is bone. Neutral grey would read as a
 // wireframe.
 export const PAL = {
-  bg:    '#090908',   // the ground, warm near-black
-  card:  '#161514',   // a card on it
-  card2: '#262322',   // a row inside a card  — lighter again
-  card3: '#35312D',   // a chip on that row
-  line:  '#332F2C',   // hairlines, now actually visible
-  mute:  '#736E67',
-  sub:   '#A29C93',
-  ink:   '#F6F3EE',   // body
-  g:     '#FFFFFF',   // the accent — pure white. On a near-black ground
-                      // the fills should be the brightest thing there is;
-                      // anything short of white reads as slightly dirty
-                      // rather than deliberate.
-  gDeep: '#2A2725',
-  gLine: 'rgba(255,255,255,.45)',
-  red:   '#C4685A',
+  // Light, because the app is read standing up in a bright gym as
+  // often as it is at six in the morning, and because a dark screen
+  // under strip lighting is a mirror. The ground is the same warm
+  // off-white the back office uses — one product, one language —
+  // rather than pure white, which is fatiguing against near-black
+  // text for the length of a session.
+  bg:    '#F4F1EC',   // the ground
+  card:  '#FFFFFF',   // a card lifts off it
+  card2: '#F2EFE9',   // a row inside a card, or an input fill
+  card3: '#E7E2D9',   // a chip on that row
+  line:  '#E4DED4',   // hairlines
+
+  mute:  '#9A9084',
+  sub:   '#6B6157',
+  ink:   '#1A1613',   // warm near-black
+
+  // The accent inverts with the ground. On near-black it was pure
+  // white; on bone it has to be the darkest thing on the screen, or a
+  // filled cell stops reading as filled.
+  g:     '#2E2721',
+  gDeep: '#EFE9DD',
+  gLine: 'rgba(46,39,33,.28)',
+  red:   '#A94E3C',
 
   // ---- the one place colour is allowed ----
   //
-  // The system is monochrome everywhere else and should stay that way.
-  // But "where to work" is a screen somebody scans for one thing —
-  // which of these is the problem — and value alone makes them read
-  // four bars and compare. Colour answers it before they've focused.
-  //
-  // Warm and desaturated so it sits on the same ground as the rest
-  // rather than looking like a different app. No pure red, no traffic
-  // green: those belong to errors and success states, and a 52 is
-  // neither an error nor a failure. It's a thing to work on.
-  weak:  '#C77A5E',   // needs the work
-  mid:   '#C4A265',   // fine
-  good:  '#8FA870',   // strong
-  best:  '#6FA894',   // well ahead of what the racing asks
-  sheet: '#1B1918',
-  gold:  '#FFFFFF', silver: '#C2BDB5', bronze: '#867F77',
-  shadow: 'none',
+  // "Where to work" is scanned for one thing — which of these is the
+  // problem — and value alone makes somebody read four bars and
+  // compare. Colour answers it before they've focused. Deepened from
+  // the dark theme's versions: the same hues wash out on bone.
+  weak:  '#B4654A',   // needs the work
+  mid:   '#A8853F',   // fine
+  good:  '#6E8A4E',   // strong
+  best:  '#4A8678',   // well ahead of what the racing asks
+
+  sheet: '#FFFFFF',
+  gold:  '#8A7350', silver: '#8D8981', bronze: '#96674A',
+
+  // A light theme has no value difference to separate a card from its
+  // ground, so the lift has to come from somewhere.
+  shadow: '0 1px 2px rgba(26,22,19,.05), 0 6px 18px rgba(26,22,19,.04)',
   markFilter: 'none',
 }
 

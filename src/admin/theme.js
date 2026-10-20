@@ -30,13 +30,15 @@ export const adminVars = {
   '--markFilter': 'invert(1)',
 }
 
-// The preview phone keeps the member's dark palette, because that is
-// literally what it is showing.
+// The preview phone carries the member's palette, because that is
+// literally what it is showing. It followed the app from dark to
+// light — a preview on the old colours is a preview of nothing.
 export const previewVars = {
-  '--bg': '#0B0A09', '--card': '#151412', '--card2': '#1F1D1A',
-  '--card3': '#2B2926', '--line': '#262421', '--ink': '#EFEAE1',
-  '--sub': '#948D83', '--mute': '#635C54', '--g': '#E8DCC8',
-  '--gDeep': '#2C2620', '--gLine': 'rgba(232,220,200,.38)',
-  '--red': '#CC7A68', '--sheet': '#171614', '--shadow': 'none',
+  '--bg': '#F4F1EC', '--card': '#FFFFFF', '--card2': '#F2EFE9',
+  '--card3': '#E7E2D9', '--line': '#E4DED4', '--ink': '#1A1613',
+  '--sub': '#6B6157', '--mute': '#9A9084', '--g': '#2E2721',
+  '--gDeep': '#EFE9DD', '--gLine': 'rgba(46,39,33,.28)',
+  '--red': '#A94E3C', '--sheet': '#FFFFFF',
+  '--shadow': '0 1px 2px rgba(26,22,19,.05), 0 6px 18px rgba(26,22,19,.04)',
   '--markFilter': 'none',
 }

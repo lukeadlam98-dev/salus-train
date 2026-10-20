@@ -115,7 +115,7 @@ const checks = [
       const src = fs.readFileSync(
         path.join(root, 'src/screens/Session.jsx'), 'utf8')
       return /const pairRest = B\.rest_s/.test(src)
-          && /\{pairRest\}s, then set \{setIdx \+ 2\}/.test(src)
+          && /<RestLine seconds=\{pairRest\} next=\{setIdx \+ 2\} \/>/.test(src)
     })()],
   ['every set is reachable — 2 movements x 3 sets = 6 log buttons',
     (html.match(/stroke-linecap/g) || []).length >= 6],

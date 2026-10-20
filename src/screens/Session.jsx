@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { C, T, F } from '../lib/theme'
 import { fmt, DAYS, round2h } from '../lib/format'
 import { getSessionDetail, startWorkout, saveSet, finishWorkout,
@@ -409,6 +409,7 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
 
       <div style={{ ...T.h2, marginTop: 18 }}>{B.label}</div>
 
+      {(B.block_lines.length > 0 || B.rest_note) ? (
       <Card style={{ marginTop: 12 }}>
         {B.scheme && <Chip>{B.scheme}</Chip>}
         {B.block_lines.map(l => (
@@ -424,6 +425,9 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
           </div>
         )}
       </Card>
+      ) : B.scheme ? (
+        <div style={{ marginTop: 10 }}><Chip>{B.scheme}</Chip></div>
+      ) : null}
 
       {B.coach_notes.length > 0 && (
         <Card style={{ marginTop: 10 }}>
@@ -443,165 +447,117 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
 
       {/* Paired above, stacked below — the same cells either way, so
           logging works identically and only the arrangement changes. */}
-      {paired && Array.from({ length: maxSets }).map((_, setIdx) => {
+      {/* One table language for both shapes.
+          Every reference for this screen lays a set out the same way:
+          the columns named once at the top, what you did last time on
+          the same row as the box you're about to type in, and the rest
+          as a divider between sets rather than a clock somewhere else.
+          None of them has supersets, so the pairing survives the
+          pattern rather than the other way round — a superset card is
+          a set with two movements in it, a straight block is a
+          movement with its sets under it, and both are the same rows. */}
+      {paired ? Array.from({ length: maxSets }).map((_, setIdx) => {
         const anyLeft = items.some(it =>
           setIdx < it.sets && !cell(it.id, setIdx).done)
         return (
           <Card key={setIdx} style={{ marginTop: 10,
-            opacity: anyLeft ? 1 : .55,
-            transition: 'opacity .25s' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9,
-              marginBottom: 12 }}>
+            opacity: anyLeft ? 1 : .62, transition: 'opacity .25s' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9,
+              marginBottom: 11 }}>
               <div style={{ fontSize: 11, fontWeight: 800,
                 letterSpacing: '.14em', color: C.mute }}>
                 SET {setIdx + 1} OF {maxSets}
               </div>
               <div style={{ flex: 1 }} />
-              {!anyLeft && (
-                <Ico d={I.check} s={14} c={C.g} w={2.6} />
-              )}
+              {!anyLeft && <Ico d={I.check} s={14} c={C.g} w={2.6} />}
             </div>
+
+            <Heads paired hasTime={items.some(i => i.movements?.has_time)} />
 
             {items.map((item, n) => {
               if (setIdx >= item.sets) return null
               const mv = item.movements
               const c = cell(item.id, setIdx)
-              const on = !!c.done
-              const kgTarget = targetKg(mv, benchmarks)
+              const restIfDone = items.every(it =>
+                it.id === item.id || setIdx >= it.sets
+                || cell(it.id, setIdx).done) ? pairRest : null
               return (
-                <div key={item.id} style={{
-                  paddingTop: n ? 11 : 0, marginTop: n ? 11 : 0,
-                  borderTop: n ? `1px solid ${C.line}` : 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline',
-                    gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 800,
-                      color: C.g, ...T.num }}>
-                      {B.letter}{n + 1}
-                    </span>
-                    <div style={{ flex: 1, fontSize: 15.5, fontWeight: 700 }}>
-                      {mv?.name}
-                    </div>
-                    <div style={{ fontSize: 12.5, color: C.sub }}>
-                      {mv?.has_time ? 'max' : `${item.reps} reps`}
-                      {lastNote(last[mv?.id]) || (kgTarget ? ` · ${kgTarget}kg` : '')}
-                    </div>
-                  </div>
-
-                  <div onClick={() => {
-                      if (on) return writeSet(item, setIdx, { done: false })
-                      const rest = items.every(it =>
-                        it.id === item.id || setIdx >= it.sets
-                        || cell(it.id, setIdx).done) ? pairRest : null
-                      logSet(item, setIdx, rest)
-                    }}
-                    style={{ display: 'flex', alignItems: 'center',
-                      cursor: 'pointer' }}>
-                    <div style={{ width: 3.5, height: 38, borderRadius: 999,
-                      marginRight: 9, flexShrink: 0,
-                      background: on ? C.g : C.card3 }} />
-                    <div style={{ flex: 1, display: 'grid',
-                      gridTemplateColumns: '1fr 1fr 48px', gap: 8,
-                      alignItems: 'center' }}>
-                      <Cell v={c.reps} ph={ghost(item, setIdx, 'reps')}
-                        on={on} act={!on && setIdx === activeSet}
-                        onTap={() => setPad({ item, i: setIdx, field: 'reps',
-                          label: mv?.has_time ? 'sec' : 'reps',
-                          time: mv?.has_time, value: c.reps ?? '' })} />
-                      <Cell v={c.kg} ph={ghost(item, setIdx, 'kg')} on={on}
-                        unit="kg"
-                        onTap={() => setPad({ item, i: setIdx, field: 'kg',
-                          label: 'kg', value: c.kg ?? '' })} />
-                      <button onClick={() => on
-                          ? writeSet(item, setIdx, { done: false })
-                          : logSet(item, setIdx, items.every(it =>
-                              it.id === item.id || setIdx >= it.sets
-                              || cell(it.id, setIdx).done) ? pairRest : null)}
-                        style={{ width: 45, height: 45, borderRadius: 999,
-                          border: 'none', cursor: 'pointer',
-                          background: on ? C.g : C.card2,
-                          display: 'grid', placeItems: 'center',
-                          animation: on
-                            ? 'pop .26s cubic-bezier(.2,.8,.3,1)' : 'none' }}>
-                        <Ico d={I.check} s={17} c={on ? C.bg : C.mute} w={2.6} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <SetRow key={item.id}
+                  label={`${B.letter}${n + 1}`} name={mv?.name}
+                  prescription={mv?.has_time ? 'max' : `${item.reps} reps`}
+                  hasTime={mv?.has_time} done={!!c.done}
+                  active={!c.done && setIdx === activeSet}
+                  reps={c.reps} kg={c.kg}
+                  repsGhost={ghost(item, setIdx, 'reps')}
+                  kgGhost={ghost(item, setIdx, 'kg')}
+                  prev={last[mv?.id]}
+                  onReps={() => setPad({ item, i: setIdx, field: 'reps',
+                    label: mv?.has_time ? 'sec' : 'reps',
+                    time: mv?.has_time, value: c.reps ?? '' })}
+                  onKg={() => setPad({ item, i: setIdx, field: 'kg',
+                    label: 'kg', value: c.kg ?? '' })}
+                  onToggle={() => c.done
+                    ? writeSet(item, setIdx, { done: false })
+                    : logSet(item, setIdx, restIfDone)} />
               )
             })}
 
-            {/* The rest belongs to the pair. */}
             {!anyLeft && setIdx < maxSets - 1 && pairRest && (
-              <div style={{ marginTop: 13, paddingTop: 11,
-                borderTop: `1px solid ${C.line}`, textAlign: 'center',
-                fontSize: 12.5, fontWeight: 600, color: C.sub }}>
-                Rest {pairRest}s, then set {setIdx + 2}
-              </div>
+              <RestLine seconds={pairRest} next={setIdx + 2} />
             )}
           </Card>
         )
-      })}
-
-      {!paired && items.map(item => {
+      }) : items.map(item => {
         const mv = item.movements
         const next = Array.from({ length: item.sets })
           .findIndex((_, i) => !cell(item.id, i).done)
         const kgTarget = targetKg(mv, benchmarks)
+        const prev = last[mv?.id]
+        const restS = item.rest_s || B.rest_s || null
         return (
           <Card key={item.id} style={{ marginTop: 10 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
               <div style={{ flex: 1, ...T.h3 }}>{mv?.name}</div>
-              {kgTarget && (
-                <div style={{ fontSize: 18, fontWeight: 800, color: C.g, ...T.num }}>
-                  {kgTarget}<span style={{ fontSize: 12 }}>kg</span>
-                </div>
-              )}
+              <div style={{ fontSize: 13, color: C.sub, flexShrink: 0 }}>
+                {item.sets} × {mv?.has_time ? 'max' : item.reps}
+              </div>
             </div>
-            <div style={{ ...T.body, fontSize: 13.5, marginTop: 3 }}>
-              {item.sets} × {mv?.has_time ? 'max' : item.reps}
-              {kgTarget ? ' · from your 5RM' : ''}
-            </div>
+            {(prev?.kg != null || kgTarget) && (
+              <div style={{ fontSize: 12.5, color: C.mute, marginTop: 3 }}>
+                {prev?.kg != null
+                  ? `Last time ${prev.kg}kg${prev.reps ? ` × ${prev.reps}` : ''}`
+                  : `Target ${kgTarget}kg · from your 5RM`}
+              </div>
+            )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '18px 1fr 1fr 48px',
-              gap: 8, fontSize: 13, fontWeight: 700, color: C.sub, margin: '13px 0 7px' }}>
-              <div />
-              <div style={{ textAlign: 'center' }}>{mv?.has_time ? 'Time' : 'Reps'}</div>
-              <div style={{ textAlign: 'center' }}>Weight</div>
-              <div />
-            </div>
-
-            {Array.from({ length: item.sets }).map((_, i) => {
-              const c = cell(item.id, i)
-              const on = !!c.done, act = i === next
-              return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                  <div style={{ width: 3.5, height: 38, borderRadius: 999, marginRight: 7,
-                    flexShrink: 0, background: on ? C.g : act ? C.ink : 'transparent' }} />
-                  <div style={{ width: 12, fontSize: 14, fontWeight: 700,
-                    color: C.sub }}>{i + 1}</div>
-                  <div style={{ flex: 1, display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 48px', gap: 8, marginLeft: 7,
-                    alignItems: 'center' }}>
-                    <Cell v={c.reps} ph={ghost(item, i, 'reps')} on={on} act={act}
-                      onTap={() => setPad({ item, i, field: 'reps',
-                        label: mv?.has_time ? 'sec' : 'reps', time: mv?.has_time,
-                        value: c.reps ?? '' })} />
-                    <Cell v={c.kg} ph={ghost(item, i, 'kg')} on={on} unit="kg"
-                      onTap={() => setPad({ item, i, field: 'kg', label: 'kg',
-                        value: c.kg ?? '' })} />
-                    <button onClick={() => on
+            <div style={{ marginTop: 12 }}>
+              <Heads hasTime={mv?.has_time} />
+              {Array.from({ length: item.sets }).map((_, i) => {
+                const c = cell(item.id, i)
+                return (
+                  <Fragment key={i}>
+                    <SetRow label={String(i + 1)}
+                      hasTime={mv?.has_time} done={!!c.done}
+                      active={i === next}
+                      reps={c.reps} kg={c.kg}
+                      repsGhost={ghost(item, i, 'reps')}
+                      kgGhost={ghost(item, i, 'kg')}
+                      prev={prev}
+                      onReps={() => setPad({ item, i, field: 'reps',
+                        label: mv?.has_time ? 'sec' : 'reps',
+                        time: mv?.has_time, value: c.reps ?? '' })}
+                      onKg={() => setPad({ item, i, field: 'kg',
+                        label: 'kg', value: c.kg ?? '' })}
+                      onToggle={() => c.done
                         ? writeSet(item, i, { done: false })
-                        : logSet(item, i)}
-                      style={{ width: 45, height: 45, borderRadius: 999, border: 'none',
-                        cursor: 'pointer', background: on ? C.g : C.card2,
-                        display: 'grid', placeItems: 'center',
-                        animation: on ? 'pop .26s cubic-bezier(.2,.8,.3,1)' : 'none' }}>
-                      <Ico d={I.check} s={17} c={on ? C.bg : C.mute} w={2.6} />
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+                        : logSet(item, i)} />
+                    {i < item.sets - 1 && restS && (
+                      <RestLine seconds={restS} quiet />
+                    )}
+                  </Fragment>
+                )
+              })}
+            </div>
           </Card>
         )
       })}
@@ -645,6 +601,92 @@ export default function Session({ session, userId, benchmarks, onBack, onFinishe
 function lastNote(prev) {
   if (!prev || prev.kg == null) return ''
   return ` · last ${prev.kg}kg${prev.reps ? ` \u00d7 ${prev.reps}` : ''}`
+}
+
+/* ---------------- the set table ----------------
+   Five columns, named once. The Previous column is the one that
+   earns its place: the number you're trying to beat sits on the row
+   with the box you type into, so nobody has to remember last Monday
+   or go looking for it. */
+
+// A straight block numbers its sets down the left. A superset card
+// IS one set, so that column has nothing to say and the movement
+// carries its own A1/A2 on the line above instead.
+const GRID  = '30px minmax(0,1fr) minmax(0,1fr) 58px 38px'
+const PGRID = 'minmax(0,1fr) minmax(0,1fr) 58px 38px'
+
+function Heads({ hasTime, paired }) {
+  const c = { fontSize: 10, fontWeight: 800, letterSpacing: '.1em',
+    color: C.mute, textAlign: 'center' }
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: paired ? PGRID : GRID,
+      gap: 7, alignItems: 'center', padding: '0 0 7px' }}>
+      {!paired && <div style={{ ...c, textAlign: 'left' }}>SET</div>}
+      <div style={c}>KG</div>
+      <div style={c}>{hasTime ? 'SEC' : 'REPS'}</div>
+      <div style={{ ...c, textAlign: 'right' }}>LAST</div>
+      <div />
+    </div>
+  )
+}
+
+function RestLine({ seconds, next, quiet }) {
+  const label = next ? `${seconds}s rest, then set ${next}` : `${seconds} second rest`
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9,
+      margin: quiet ? '2px 0 8px' : '12px 0 2px' }}>
+      <div style={{ flex: 1, height: 1, background: C.line }} />
+      <div style={{ fontSize: 11, fontWeight: 600, color: C.mute,
+        whiteSpace: 'nowrap' }}>{label}</div>
+      <div style={{ flex: 1, height: 1, background: C.line }} />
+    </div>
+  )
+}
+
+function SetRow({ label, name, prescription, hasTime, done, active,
+                  reps, kg, repsGhost, kgGhost, prev,
+                  onReps, onKg, onToggle }) {
+  return (
+    <div onClick={onToggle} style={{ cursor: 'pointer', marginBottom: 7 }}>
+      {name && (
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8,
+          margin: '4px 0 6px' }}>
+          <span style={{ fontSize: 11.5, fontWeight: 800, color: C.g,
+            ...T.num }}>{label}</span>
+          <div style={{ flex: 1, fontSize: 15, fontWeight: 700,
+            overflow: 'hidden', textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap' }}>{name}</div>
+          <div style={{ fontSize: 12, color: C.mute,
+            flexShrink: 0 }}>{prescription}</div>
+        </div>
+      )}
+      <div style={{ display: 'grid',
+        gridTemplateColumns: name ? PGRID : GRID, gap: 7,
+        alignItems: 'center' }}>
+        {!name && (
+          <div style={{ fontSize: 13, fontWeight: 700,
+            color: done ? C.ink : C.mute, ...T.num }}>{label}</div>
+        )}
+        <Cell v={kg} ph={kgGhost} on={done} act={active} onTap={onKg} />
+        <Cell v={reps} ph={repsGhost} on={done} act={active} onTap={onReps} />
+        <div style={{ fontSize: 12, color: C.mute, textAlign: 'right',
+          ...T.num, overflow: 'hidden', textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap' }}>
+          {prev?.kg != null
+            ? `${prev.kg}${prev.reps ? `×${prev.reps}` : ''}`
+            : '\u2014'}
+        </div>
+        <button onClick={e => { e.stopPropagation(); onToggle?.() }}
+          style={{ width: 34, height: 34, borderRadius: 10, border: 'none',
+            cursor: 'pointer', justifySelf: 'end',
+            background: done ? C.g : C.card2,
+            display: 'grid', placeItems: 'center',
+            animation: done ? 'pop .26s cubic-bezier(.2,.8,.3,1)' : 'none' }}>
+          <Ico d={I.check} s={15} c={done ? C.bg : C.mute} w={2.8} />
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function Cell({ v, ph, on, act, unit, onTap }) {
